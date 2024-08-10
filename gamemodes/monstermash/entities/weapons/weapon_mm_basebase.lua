@@ -112,7 +112,6 @@ SWEP.FlameThrower = false
 SWEP.JustShot = false
 
 SWEP.IsMMGun = true
-SWEP.Ownership = nil
 SWEP.SpawnTime = 0
 
 function SWEP:SetupDataTables()
@@ -144,7 +143,6 @@ function SWEP:Deploy()
     if self.IdleSound != nil then
         self:EmitSound(self.IdleSound, 75, 100, 1, CHAN_VOICE2)
     end
-    self.Ownership = self:GetOwner()
     return true
 end
 
