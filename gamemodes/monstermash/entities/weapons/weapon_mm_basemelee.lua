@@ -112,27 +112,27 @@ function SWEP:SetupDataTables()
 end
 
 function SWEP:HandleHoldTypes()
-    if self.Owner:MissingBothArms() && self:GetClass() != "weapon_mm_headbutt" then
+    if self:GetOwner():MissingBothArms() && self:GetClass() != "weapon_mm_headbutt" then
         if SERVER then
-            local owner = self.Owner
+            local owner = self:GetOwner()
             owner:DropWeapon(self)
             owner:StripWeapons()
             owner:Give("weapon_mm_headbutt")
         end
-    elseif self.Owner:MissingLeftArm() then
-        if (IsValid(self.Owner:GetHands())) then
-            self.Owner:GetHands():SetBodygroup(1,1)
+    elseif self:GetOwner():MissingLeftArm() then
+        if (IsValid(self:GetOwner():GetHands())) then
+            self:GetOwner():GetHands():SetBodygroup(1,1)
         end
-    elseif self.Owner:MissingRightArm() then
+    elseif self:GetOwner():MissingRightArm() then
         self:SetHoldType("fist")
         self.ViewModelFlip = true
-        if (IsValid(self.Owner:GetHands())) then
-            self.Owner:GetHands():SetBodygroup(1,1)
+        if (IsValid(self:GetOwner():GetHands())) then
+            self:GetOwner():GetHands():SetBodygroup(1,1)
         end
     else
         self.ViewModelFlip = false
-        if (IsValid(self.Owner:GetHands())) then
-            self.Owner:GetHands():SetBodygroup(1,0)
+        if (IsValid(self:GetOwner():GetHands())) then
+            self:GetOwner():GetHands():SetBodygroup(1,0)
         end
         if (self:GetMMBase_MeleeSwing() < CurTime()) then
             self:SetHoldType(self.HoldType)
@@ -141,16 +141,16 @@ function SWEP:HandleHoldTypes()
 end
 
 function SWEP:PrimaryAttack()
-    if self.Owner:GetMoveType() == MOVETYPE_LADDER then return end
-    if self.Primary.SwingHold && (self:GetMMBase_MeleeSwingHold()-CurTime() > -0.2 && self.Owner:KeyDown(IN_ATTACK)) then return end 
+    if self:GetOwner():GetMoveType() == MOVETYPE_LADDER then return end
+    if self.Primary.SwingHold && (self:GetMMBase_MeleeSwingHold()-CurTime() > -0.2 && self:GetOwner():KeyDown(IN_ATTACK)) then return end 
     if self:GetMMBase_ShootTimer() != 0 then return end
-    if (self.Primary.SpecialCooldown != 0 && self.Owner:GetWeaponCooldown(self) > 0) then return end
+    if (self.Primary.SpecialCooldown != 0 && self:GetOwner():GetWeaponCooldown(self) > 0) then return end
     self:RemoveSpawnProtection()
     self:SetMMBase_MeleeSwing(CurTime()+self.SwingTime)
     self:SetHoldType(self.HoldTypeAttack)
     self:SendWeaponAnim(self.AttackAnim)
     self:SetMMBase_ShootTimer(CurTime() + self.Primary.Delay)
-    self.Owner:SetAnimation(PLAYER_ATTACK1)
+    self:GetOwner():SetAnimation(PLAYER_ATTACK1)
     self:SetMMBase_MeleeSwingHold(0)
     self.LastAttack = CurTime() + self.LockOnTime
     if type(self.Primary.SwingSound) == "table" then
@@ -161,7 +161,7 @@ function SWEP:PrimaryAttack()
     end
     self:EmitSound("empty.wav", 75, 100, 1, CHAN_VOICE2)
     self:SetMMBase_LoopSoundRepeat(CurTime()+1.5)
-    self.Owner:SetLastAttackTime()
+    self:GetOwner():SetLastAttackTime()
     timer.Simple(0.3, function() if !IsValid(self) then return end self:SetHoldType(self.HoldType) end)
     
 end 
@@ -170,13 +170,13 @@ function SWEP:PrimaryAttackLoop()
     if self:GetMMBase_MeleeSwing() == 0 then
         self:SetMMBase_MeleeSwing(CurTime()+self.SwingTime)
         self:SendWeaponAnim(self.AttackAnimLoopStart)
-        self.Owner:SetAnimation(PLAYER_ATTACK1)
+        self:GetOwner():SetAnimation(PLAYER_ATTACK1)
         self:EmitSound(self.Primary.LoopSound)
         self:EmitSound("empty.wav", 75, 100, 1, CHAN_VOICE2)
         self:SetMMBase_LoopSoundRepeat(CurTime()+1.5)
     elseif self:GetMMBase_MeleeSwing() < CurTime() then
-        local vm = self.Owner:GetViewModel()
-        self.Owner:SetAnimation(PLAYER_ATTACK1)
+        local vm = self:GetOwner():GetViewModel()
+        self:GetOwner():SetAnimation(PLAYER_ATTACK1)
         vm:SetSequence(vm:SelectWeightedSequence(self.AttackAnimLoopLoop))
         self:DoDamage(true)
         self:SetMMBase_MeleeSwing(CurTime() + self.Secondary.Delay)
@@ -186,11 +186,11 @@ function SWEP:PrimaryAttackLoop()
 end 
 
 function SWEP:SecondaryAttack()
-    if self.Owner:MissingALeg() then return end
-    if self.Owner:CanUseAbility() && self.Owner:GetWalkSpeed() > 1 then
+    if self:GetOwner():MissingALeg() then return end
+    if self:GetOwner():CanUseAbility() && self:GetOwner():GetWalkSpeed() > 1 then
         self:RemoveSpawnProtection()
-        self.Owner:MeleeCharge()
-        self.Owner:SetLastAttackTime()
+        self:GetOwner():MeleeCharge()
+        self:GetOwner():SetLastAttackTime()
     end
 end
 
@@ -202,7 +202,7 @@ hook.Add("CreateMove", "MM_MeleeChargeCreateMove", function(cmd)
 end)
 
 function SWEP:AdjustMouseSensitivity()
-    if (self.Owner:IsMeleeCharging()) then
+    if (IsValid( self:GetOwner() ) and self:GetOwner():IsMeleeCharging()) then
         return 0.2
     else
         return 1
@@ -215,14 +215,14 @@ end
 function SWEP:Think()
     BaseClass.Think(self)
     if (self.Primary.SwingHold) then
-        if (self:GetMMBase_MeleeSwingHold() == 0 && self:GetMMBase_ShootTimer() == 0 && self.Owner:KeyDown(IN_ATTACK)) then
+        if (self:GetMMBase_MeleeSwingHold() == 0 && self:GetMMBase_ShootTimer() == 0 && self:GetOwner():KeyDown(IN_ATTACK)) then
             self:SetMMBase_MeleeSwingHold(CurTime())
         elseif self:GetMMBase_MeleeSwingHold() != 0 then
-            if self:GetMMBase_MeleeSwingHold()-CurTime() > -0.2 && self.Owner:KeyReleased(IN_ATTACK) then
+            if self:GetMMBase_MeleeSwingHold()-CurTime() > -0.2 && self:GetOwner():KeyReleased(IN_ATTACK) then
                 self:PrimaryAttack()
             elseif self:GetMMBase_MeleeSwingHold()-CurTime() <= -0.2 then
                 self:PrimaryAttackLoop()
-                if !self.Owner:KeyDown(IN_ATTACK) then
+                if !self:GetOwner():KeyDown(IN_ATTACK) then
                     self:SetMMBase_MeleeSwingHold(0)
                     self:SetMMBase_MeleeSwing(0)
                     self:SetMMBase_ShootTimer(CurTime() + 1)
@@ -235,16 +235,16 @@ function SWEP:Think()
     end
     
     if (self.Primary.SpecialCooldown != 0) then
-        if self.Owner:GetWeaponCooldown(self) > 0 then
+        if self:GetOwner():GetWeaponCooldown(self) > 0 then
             self:SendWeaponAnim(ACT_VM_DRAW)
-            self.Owner:GetViewModel():SetPlaybackRate(0)
+            self:GetOwner():GetViewModel():SetPlaybackRate(0)
             self.ViewModelFOV = 1
             self:SetClip1(0)
             return
         elseif self:Clip1() == 0 then
-            self.Owner:SetWeaponCooldown(self, 0)
+            self:GetOwner():SetWeaponCooldown(self, 0)
             self.ViewModelFOV = 54
-            self.Owner:GetViewModel():SetPlaybackRate(1)
+            self:GetOwner():GetViewModel():SetPlaybackRate(1)
             self:SendWeaponAnim(ACT_VM_DRAW)
             self:SetNextPrimaryFire(CurTime()+0.5)
             self:SetClip1(1)
@@ -252,32 +252,32 @@ function SWEP:Think()
     end
     
     if self:GetMMBase_MeleeSwing() != 0 && self:GetMMBase_MeleeSwing() < CurTime() then
-        if (self.Primary.SpecialCooldown == 0 || self.Owner:GetWeaponCooldown(self) == 0) then
+        if (self.Primary.SpecialCooldown == 0 || self:GetOwner():GetWeaponCooldown(self) == 0) then
             self:DoDamage()
         end
     end
     
-    if IsValid(self.Owner) then
-        if self.Owner:IsMeleeCharging() then
+    if IsValid(self:GetOwner()) then
+        if self:GetOwner():IsMeleeCharging() then
             local tr = util.TraceHull({
-                start = self.Owner:GetShootPos(),
-                endpos = self.Owner:GetShootPos() + (Vector(self.Owner:GetAimVector().x, self.Owner:GetAimVector().y, 0) * 64),
-                filter = self.Owner,
+                start = self:GetOwner():GetShootPos(),
+                endpos = self:GetOwner():GetShootPos() + (Vector(self:GetOwner():GetAimVector().x, self:GetOwner():GetAimVector().y, 0) * 64),
+                filter = self:GetOwner(),
                 mins = Vector(-10, -10, -10),
                 maxs = Vector(10, 10, 10),
                 mask = MASK_SHOT_HULL
             })
             
             if tr && tr.Hit && tr.Entity:IsPlayer() then
-                self.Owner:RemoveStatusEffect(STATUS_MELEECHARGE)
-                self.Owner:SetStatusEffect(STATUS_MELEECHARGEEXTRA, nil, self.DashGrace)
+                self:GetOwner():RemoveStatusEffect(STATUS_MELEECHARGE)
+                self:GetOwner():SetStatusEffect(STATUS_MELEECHARGEEXTRA, nil, self.DashGrace)
                 self:SetMMBase_MeleeChargeExtra(CurTime()+self.DashGrace)
-                self.Owner:SetVelocity(self.Owner:GetAimVector(), 0)
+                self:GetOwner():SetVelocity(self:GetOwner():GetAimVector(), 0)
                 if SERVER then
-                    self.Owner:EmitSound("physics/body/body_medium_impact_hard" .. math.random(1, 6) .. ".wav", math.Rand(80, 100), math.Rand(90, 120)) 
-                    tr.Entity:TakeDamage(5, self.Owner, self)
+                    self:GetOwner():EmitSound("physics/body/body_medium_impact_hard" .. math.random(1, 6) .. ".wav", math.Rand(80, 100), math.Rand(90, 120)) 
+                    tr.Entity:TakeDamage(5, self:GetOwner(), self)
                     local shake = ents.Create("env_shake")
-                    shake:SetOwner(self.Owner)
+                    shake:SetOwner(self:GetOwner())
                     shake:SetPos(tr.HitPos)
                     shake:SetKeyValue("amplitude", "2500")
                     shake:SetKeyValue("radius", "100")
@@ -301,17 +301,17 @@ function SWEP:DoDamage(secondary)
     self:SetMMBase_MeleeSwing(0)
     
     local tr = util.TraceLine({
-        start = self.Owner:GetShootPos(),
-        endpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Reach,
-        filter = self.Owner,
+        start = self:GetOwner():GetShootPos(),
+        endpos = self:GetOwner():GetShootPos() + self:GetOwner():GetAimVector() * self.Reach,
+        filter = self:GetOwner(),
         mask = MASK_SHOT_HULL
     })
  
     if (!IsValid(tr.Entity)) then
         tr = util.TraceHull({
-            start = self.Owner:GetShootPos(),
-            endpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * self.Reach,
-            filter = self.Owner,
+            start = self:GetOwner():GetShootPos(),
+            endpos = self:GetOwner():GetShootPos() + self:GetOwner():GetAimVector() * self.Reach,
+            filter = self:GetOwner(),
             mins = Vector(-self.BoxSize, -self.BoxSize, -self.BoxSize),
             maxs = Vector(self.BoxSize, self.BoxSize, self.BoxSize),
             mask = MASK_SHOT_HULL
@@ -330,7 +330,7 @@ function SWEP:DoDamage(secondary)
         
         if SERVER then
             local dmginfo = DamageInfo()
-            local attacker = self.Owner
+            local attacker = self:GetOwner()
             local damage = mode.Damage
             local addedkillflag1 = false
             local addedkillflag2 = false
@@ -350,7 +350,7 @@ function SWEP:DoDamage(secondary)
                 dmginfo:SetDamage(damage*2)
                 addedkillflag1 = true
                 self.KillFlags = bit.bor(self.KillFlags, KILL_BACKSTAB)
-            elseif self.Owner:IsMeleeCharging() || self:GetMMBase_MeleeChargeExtra() > CurTime() then
+            elseif self:GetOwner():IsMeleeCharging() || self:GetMMBase_MeleeChargeExtra() > CurTime() then
                 dmginfo:SetDamage(damage*1.2)
             else
                 dmginfo:SetDamage(damage)
@@ -393,7 +393,7 @@ function SWEP:DoDamage(secondary)
                     tr.Entity:SetStatusEffect(STATUS_ONFIRE, dmginfo, 6)
                 end
             end
-            if (!tr.Entity:IsPlayer() || tr.Entity:CanBeDamagedBy(self.Owner)) then
+            if (!tr.Entity:IsPlayer() || tr.Entity:CanBeDamagedBy(self:GetOwner())) then
                 tr.Entity:TakeDamageInfo(dmginfo)
             end
             
@@ -410,44 +410,44 @@ function SWEP:DoDamage(secondary)
 				end
             end)
             if (self.Primary.SpecialCooldown != 0) && tr.Entity:IsPlayer() then
-                self.Owner:SetWeaponCooldown(self, self.Primary.SpecialCooldown)
+                self:GetOwner():SetWeaponCooldown(self, self.Primary.SpecialCooldown)
             end
         end
         
         // Push the physics object around
         local phys = tr.Entity:GetPhysicsObject()
         if (IsValid(phys)) then
-            phys:ApplyForceOffset(self.Owner:GetAimVector()*80*phys:GetMass(), tr.HitPos)
+            phys:ApplyForceOffset(self:GetOwner():GetAimVector()*80*phys:GetMass(), tr.HitPos)
         end
     end
     
     if self.DoViewPunch then
-        self.Owner:ViewPunch(self.Primary.Recoil)
+        self:GetOwner():ViewPunch(self.Primary.Recoil)
     end
     self:DoMeleeDecal()
 end
 
 function SWEP:Backstab()
     local tr = util.TraceLine({
-        start = self.Owner:GetShootPos(),
-        endpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * 150,
-        filter = self.Owner,
+        start = self:GetOwner():GetShootPos(),
+        endpos = self:GetOwner():GetShootPos() + self:GetOwner():GetAimVector() * 150,
+        filter = self:GetOwner(),
         mask = MASK_SHOT_HULL
     })
 
     if (!IsValid(tr.Entity)) then 
         tr = util.TraceHull({
-            start = self.Owner:GetShootPos(),
-            endpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * 150,
-            filter = self.Owner,
+            start = self:GetOwner():GetShootPos(),
+            endpos = self:GetOwner():GetShootPos() + self:GetOwner():GetAimVector() * 150,
+            filter = self:GetOwner(),
             mins = Vector(-20, -20, -16),
             maxs = Vector(20, 20, 16),
             mask = MASK_SHOT_HULL
         })
     end
 	
-    if tr.Hit && IsValid(tr.Entity) && (tr.Entity:IsPlayer() && (math.abs(math.AngleDifference(tr.Entity:GetAngles().y,self.Owner:GetAngles().y)) <= 50)) then
-		//self.Owner:SetVelocity(Vector(self.Owner:GetAimVector(), self.Owner:GetAimVector(), 0)*500)
+    if tr.Hit && IsValid(tr.Entity) && (tr.Entity:IsPlayer() && (math.abs(math.AngleDifference(tr.Entity:GetAngles().y,self:GetOwner():GetAngles().y)) <= 50)) then
+		//self:GetOwner():SetVelocity(Vector(self:GetOwner():GetAimVector(), self:GetOwner():GetAimVector(), 0)*500)
         return true
     else
         return false
@@ -467,9 +467,9 @@ end)
 
 function SWEP:DoMeleeDecal()
     local tr = {}
-    tr.start = self.Owner:GetShootPos()
-    tr.endpos = self.Owner:GetShootPos() + (self.Owner:GetAimVector() * (self.Reach+10.7))
-    tr.filter = self.Owner
+    tr.start = self:GetOwner():GetShootPos()
+    tr.endpos = self:GetOwner():GetShootPos() + (self:GetOwner():GetAimVector() * (self.Reach+10.7))
+    tr.filter = self:GetOwner()
     tr.mask = MASK_SHOT
     
     local trace = util.TraceLine(tr)
@@ -477,30 +477,30 @@ function SWEP:DoMeleeDecal()
         if (trace.Hit) then
             bullet = {}
             bullet.Num    = 1
-            bullet.Src    = self.Owner:GetShootPos()
-			local direc = self.Owner:GetAimVector()
-			direc = direc + self.Owner:GetForward() * 0
-			direc = direc + self.Owner:GetRight() * -(i*0.05)
-			direc = direc + self.Owner:GetUp() * 0
+            bullet.Src    = self:GetOwner():GetShootPos()
+			local direc = self:GetOwner():GetAimVector()
+			direc = direc + self:GetOwner():GetForward() * 0
+			direc = direc + self:GetOwner():GetRight() * -(i*0.05)
+			direc = direc + self:GetOwner():GetUp() * 0
 			bullet.Dir    = direc
             bullet.Spread = Vector(0, 0, 0)
             bullet.Tracer = 0
             bullet.Force  = 1
             bullet.Damage = 0
             if self.DecalLeaveBullethole == true || (self.DecalMakeBlood == true && trace.Entity:IsPlayer()) then
-                self.Owner:FireBullets(bullet) 
+                self:GetOwner():FireBullets(bullet) 
             end
             if self.DecalUse == true then
                 for loop = 1,self.DecalAmount do 
                     timer.Simple(self.DecalSpeed*loop, function() 
-                        if !IsValid(self) || !IsValid(self.Owner) then return end 
+                        if !IsValid(self) || !IsValid(self:GetOwner()) then return end 
                         local increment = (self.DecalSpread - (((2*self.DecalSpread)/self.DecalAmount)*loop))*self.DecalDirection
-                        tr.endpos = tr.endpos + self.Owner:EyeAngles():Forward()*5 
+                        tr.endpos = tr.endpos + self:GetOwner():EyeAngles():Forward()*5 
                         local tr2 = {} 
-                        tr2.start = trace.HitPos + trace.HitNormal*2 + self.Owner:EyeAngles():Right()*increment 
+                        tr2.start = trace.HitPos + trace.HitNormal*2 + self:GetOwner():EyeAngles():Right()*increment 
                         tr2.endpos = tr2.start - trace.HitNormal*5 
                         tr2.mask = MASK_PLAYERSOLID 
-                        tr2.filter = self.Owner 
+                        tr2.filter = self:GetOwner() 
                         local trace2 = util.TraceLine(tr2) 
                         if trace2.HitWorld then 
                             util.Decal(self.DecalMaterial, trace2.HitPos+trace2.HitNormal, trace2.HitPos-trace2.HitNormal ) 
@@ -528,16 +528,16 @@ function SWEP:DrawDebugBox(size, dist)
     local mins = Vector(-size, -size, -size)
     local maxs = Vector(size, size, size)
     local tr = util.TraceLine({
-        start = self.Owner:GetShootPos(),
-        endpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * dist,
-        filter = self.Owner,
+        start = self:GetOwner():GetShootPos(),
+        endpos = self:GetOwner():GetShootPos() + self:GetOwner():GetAimVector() * dist,
+        filter = self:GetOwner(),
         mask = MASK_SHOT_HULL
     })
     if (!IsValid(tr.Entity)) then
         tr = util.TraceHull({
-            start = self.Owner:GetShootPos(),
-            endpos = self.Owner:GetShootPos() + self.Owner:GetAimVector() * dist,
-            filter = self.Owner,
+            start = self:GetOwner():GetShootPos(),
+            endpos = self:GetOwner():GetShootPos() + self:GetOwner():GetAimVector() * dist,
+            filter = self:GetOwner(),
             mins = mins,
             maxs = maxs,
             mask = MASK_SHOT_HULL

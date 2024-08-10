@@ -144,7 +144,7 @@ function SWEP:Deploy()
     if self.IdleSound != nil then
         self:EmitSound(self.IdleSound, 75, 100, 1, CHAN_VOICE2)
     end
-    self.Ownership = self.Owner
+    self.Ownership = self:GetOwner()
     return true
 end
 
@@ -156,7 +156,7 @@ function SWEP:Holster(wep)
     if self.IdleSound != nil then
         self:EmitSound("empty.wav", 75, 100, 1, CHAN_VOICE2)
     end
-    self.Owner.PrevWeapon = self
+    self:GetOwner().PrevWeapon = self
     return true
 end
 
@@ -208,7 +208,7 @@ function SWEP:Think()
 
 end
 
-// Random numbers are a big nono in multiplayer, so we need something deterministic
+-- Random numbers are a big nono in multiplayer, so we need something deterministic
 function SWEP:RandomRange(val1, val2)
     self:SetMMBase_RandSeed((self:GetMMBase_RandSeed()*CurTime())%147483648)
     local div = 147483648 / (val2-val1)
@@ -227,7 +227,7 @@ function SWEP:HandleTimers()
     
     if self:GetMMBase_ReloadTimer() != 0 && self:GetMMBase_ReloadTimer() < CurTime() then
         self:SetMMBase_ReloadTimer(0)
-        self.Owner:GetViewModel():SetPlaybackRate(1)
+        self:GetOwner():GetViewModel():SetPlaybackRate(1)
     end    
     
     if self:GetMMBase_LoopSoundRepeat() != 0 && self:GetMMBase_LoopSoundRepeat() < CurTime() then
@@ -249,65 +249,65 @@ function SWEP:HandleTimers()
 end
 
 function SWEP:HandleMovementSpeed()
-    if !IsValid(self.Owner) || !self.Owner:Alive() then return end
+    if !IsValid(self:GetOwner()) || !self:GetOwner():Alive() then return end
     local speed = 220
     
-    // Spooked speed
-    if self.Owner:HasStatusEffect(STATUS_SPOOKED) || self.Owner:HasStatusEffect(STATUS_BATS) || self.Owner:HasStatusEffect(STATUS_ELECTROCUTED) || self.Owner:HasStatusEffect(STATUS_SELFELECTROCUTED) || self.Owner:IsDodgeRolling() then
-        if !self.Owner:IsFrozen() then
-            self.Owner:Freeze(true)
+    -- Spooked speed
+    if self:GetOwner():HasStatusEffect(STATUS_SPOOKED) || self:GetOwner():HasStatusEffect(STATUS_BATS) || self:GetOwner():HasStatusEffect(STATUS_ELECTROCUTED) || self:GetOwner():HasStatusEffect(STATUS_SELFELECTROCUTED) || self:GetOwner():IsDodgeRolling() then
+        if !self:GetOwner():IsFrozen() then
+            self:GetOwner():Freeze(true)
         end
     elseif GAMEMODE:GetRoundState() != GMSTATE_BUYTIME then
-        if self.Owner:IsFrozen() then
-            self.Owner:Freeze(false)
+        if self:GetOwner():IsFrozen() then
+            self:GetOwner():Freeze(false)
         end
     end
     
-    // Spiderweb speed
-    if self.Owner:HasStatusEffect(STATUS_SPIDERWEBBED) then
+    -- Spiderweb speed
+    if self:GetOwner():HasStatusEffect(STATUS_SPIDERWEBBED) then
         speed = math.min(speed, self.NoSpeed)
     end
     
-    // Missing a leg speed
-    if self.Owner:MissingALeg() && !self.Owner:MissingBothLegs() then
+    -- Missing a leg speed
+    if self:GetOwner():MissingALeg() && !self:GetOwner():MissingBothLegs() then
         speed = math.min(speed, self.NoSpeed)
     end
     
-    // Gorejar speed
-    if self.Owner:HasStatusEffect(STATUS_GOREJARED) then
+    -- Gorejar speed
+    if self:GetOwner():HasStatusEffect(STATUS_GOREJARED) then
         speed = math.min(speed, self.GoreJarSpeed)
     end
     
-    // Reloading speed
-    //if self:GetMMBase_ReloadTimer() != 0 then
-    //    if (self.Owner:MissingBothLegs() || self.Owner:MissingALeg()) then
-    //        speed = math.min(speed, self.NoSpeed)
-    //    else
-    //        speed = math.min(speed, self.ReloadSpeed)
-    //    end
-    //end
+    -- Reloading speed
+    --if self:GetMMBase_ReloadTimer() != 0 then
+    --    if (self:GetOwner():MissingBothLegs() || self:GetOwner():MissingALeg()) then
+    --        speed = math.min(speed, self.NoSpeed)
+    --    else
+    --        speed = math.min(speed, self.ReloadSpeed)
+    --    end
+    --end
     
-    // Shooting speed
+    -- Shooting speed
     if (self:GetMMBase_ShootTimer() != 0 && !self:GetMMBase_Deploying()) || self:GetMMBase_Windup() != 0 || self:GetMMBase_BurstCount() != 0 then
-        if (self.Owner:MissingBothLegs()) then
+        if (self:GetOwner():MissingBothLegs()) then
             speed = math.min(speed, self.NoSpeed)
         else
             speed = math.min(speed, self.ShootSpeed)
         end
     end
     
-    // Taunt speed
-    if self.Owner:HasStatusEffect(STATUS_TAUNT) then
+    -- Taunt speed
+    if self:GetOwner():HasStatusEffect(STATUS_TAUNT) then
         speed = math.min(speed, 1)
     end
     
-    // Normal movement speed
-    if (self.Owner:MissingBothLegs()) then
+    -- Normal movement speed
+    if (self:GetOwner():MissingBothLegs()) then
         speed = math.min(speed, self.NoLegsSpeed)
     else
         local multiplier = 1
         if (self.Base == "weapon_mm_basemelee") then
-            local tr = self.Owner:GetEyeTrace()
+            local tr = self:GetOwner():GetEyeTrace()
             if (IsValid(tr.Entity) && tr.Entity:IsPlayer()) then
                 if (tr.HitPos:Distance(tr.StartPos) < 150) then
                     multiplier = 1+math.max(0, self:GetMMBase_MeleeSwing()-CurTime())*3
@@ -320,22 +320,22 @@ function SWEP:HandleMovementSpeed()
         speed = math.min(speed, self.RunSpeed)*multiplier
     end
     
-    // Melee charging
-    if self.Owner:IsMeleeCharging() && self.Owner:GetActiveWeapon().Base == "weapon_mm_basemelee" then
+    -- Melee charging
+    if self:GetOwner():IsMeleeCharging() && self:GetOwner():GetActiveWeapon().Base == "weapon_mm_basemelee" then
         speed = self.ChargeSpeed
     end
     
-    // Set the speed
+    -- Set the speed
     self:SetMovementSpeed(speed)
     
-    // Handle hopping
+    -- Handle hopping
     self:HandleHop()
 end
 
 function SWEP:SetMovementSpeed(speed)
-    if self.Owner:GetRunSpeed() != speed then
-        self.Owner:SetRunSpeed(speed)
-        self.Owner:SetWalkSpeed(speed)
+    if self:GetOwner():GetRunSpeed() != speed then
+        self:GetOwner():SetRunSpeed(speed)
+        self:GetOwner():SetWalkSpeed(speed)
     end
 end
 
@@ -367,121 +367,121 @@ hook.Add("SetupMove", "MM_DisableStuffIfNoLegs", function(ply, mvd, cmd)
 end)
 
 function SWEP:HandleHop()
-    if !IsValid(self.Owner) || !self.Owner:Alive() then return end
-    if !self.Owner:MissingALeg() || self.Owner:MissingBothLegs() then return end
+    if !IsValid(self:GetOwner()) || !self:GetOwner():Alive() then return end
+    if !self:GetOwner():MissingALeg() || self:GetOwner():MissingBothLegs() then return end
     if self:GetMMBase_ReloadTimer() != 0 then return end
-    if !self.Owner:IsOnGround() then return end
+    if !self:GetOwner():IsOnGround() then return end
     
     local power_jump = 150
     local power_forward = 200
     
-    if self.Owner:GetNWFloat("MM_NextHop") == 0 then
-        self.Owner:SetNWFloat("MM_NextHop", CurTime() + 0.35)
+    if self:GetOwner():GetNWFloat("MM_NextHop") == 0 then
+        self:GetOwner():SetNWFloat("MM_NextHop", CurTime() + 0.35)
     end
     
-    if self.Owner:GetNWFloat("MM_NextHop") < CurTime() && (self.Owner:KeyDown(IN_FORWARD) || self.Owner:KeyDown(IN_BACK) || self.Owner:KeyDown(IN_MOVELEFT) || self.Owner:KeyDown(IN_MOVERIGHT)) then
-        self.Owner:SetGroundEntity(NULL)
-        self.Owner:SetNWFloat("MM_NextHop",0)
+    if self:GetOwner():GetNWFloat("MM_NextHop") < CurTime() && (self:GetOwner():KeyDown(IN_FORWARD) || self:GetOwner():KeyDown(IN_BACK) || self:GetOwner():KeyDown(IN_MOVELEFT) || self:GetOwner():KeyDown(IN_MOVERIGHT)) then
+        self:GetOwner():SetGroundEntity(NULL)
+        self:GetOwner():SetNWFloat("MM_NextHop",0)
         
-        // Bleed on the floor
-        if (self.Owner:GetCharacter().bloodtype == BLOODTYPE_NORMAL) then
+        -- Bleed on the floor
+        if (self:GetOwner():GetCharacter().bloodtype == BLOODTYPE_NORMAL) then
             local vPoint
             
-            if self.Owner:MissingLeftLeg() then
-                vPoint = self.Owner:GetBonePosition(self.Owner:LookupBone("ValveBiped.Bip01_L_Thigh"))
-            elseif self.Owner:MissingRightLeg() then
-                vPoint = self.Owner:GetBonePosition(self.Owner:LookupBone("ValveBiped.Bip01_R_Thigh"))
+            if self:GetOwner():MissingLeftLeg() then
+                vPoint = self:GetOwner():GetBonePosition(self:GetOwner():LookupBone("ValveBiped.Bip01_L_Thigh"))
+            elseif self:GetOwner():MissingRightLeg() then
+                vPoint = self:GetOwner():GetBonePosition(self:GetOwner():LookupBone("ValveBiped.Bip01_R_Thigh"))
             end
             
             local effectdata = EffectData()
             effectdata:SetOrigin(vPoint)
             util.Effect("BloodImpact", effectdata)
         
-            local start = self.Owner:GetPos()
+            local start = self:GetOwner():GetPos()
             local btr = util.TraceLine({start=start, endpos=(start + Vector(0,0,-256)), filter=ignore, mask=MASK_SOLID})
-            util.Decal("Blood", btr.HitPos+btr.HitNormal, btr.HitPos-btr.HitNormal, self.Owner)
+            util.Decal("Blood", btr.HitPos+btr.HitNormal, btr.HitPos-btr.HitNormal, self:GetOwner())
         end
         
-        local vec = Vector(self.Owner:GetAimVector().x, self.Owner:GetAimVector().y, 0):GetNormalized()
+        local vec = Vector(self:GetOwner():GetAimVector().x, self:GetOwner():GetAimVector().y, 0):GetNormalized()
         local ang = Angle(0,0,0)
-        if self.Owner:KeyDown(IN_FORWARD) && !(self.Owner:KeyDown(IN_MOVELEFT) || self.Owner:KeyDown(IN_MOVERIGHT) || self.Owner:KeyDown(IN_BACK)) then
+        if self:GetOwner():KeyDown(IN_FORWARD) && !(self:GetOwner():KeyDown(IN_MOVELEFT) || self:GetOwner():KeyDown(IN_MOVERIGHT) || self:GetOwner():KeyDown(IN_BACK)) then
             vec = vec
-        elseif self.Owner:KeyDown(IN_BACK) && !(self.Owner:KeyDown(IN_MOVELEFT) || self.Owner:KeyDown(IN_MOVERIGHT) || self.Owner:KeyDown(IN_FORWARD)) then
+        elseif self:GetOwner():KeyDown(IN_BACK) && !(self:GetOwner():KeyDown(IN_MOVELEFT) || self:GetOwner():KeyDown(IN_MOVERIGHT) || self:GetOwner():KeyDown(IN_FORWARD)) then
             vec = -vec
-        elseif self.Owner:KeyDown(IN_MOVELEFT) && !(self.Owner:KeyDown(IN_FORWARD) || self.Owner:KeyDown(IN_BACK) || self.Owner:KeyDown(IN_MOVERIGHT)) then
+        elseif self:GetOwner():KeyDown(IN_MOVELEFT) && !(self:GetOwner():KeyDown(IN_FORWARD) || self:GetOwner():KeyDown(IN_BACK) || self:GetOwner():KeyDown(IN_MOVERIGHT)) then
             ang = Angle(0,-90,0)
             vec = -vec
-        elseif self.Owner:KeyDown(IN_MOVERIGHT) && !(self.Owner:KeyDown(IN_FORWARD) || self.Owner:KeyDown(IN_BACK) || self.Owner:KeyDown(IN_MOVELEFT)) then
+        elseif self:GetOwner():KeyDown(IN_MOVERIGHT) && !(self:GetOwner():KeyDown(IN_FORWARD) || self:GetOwner():KeyDown(IN_BACK) || self:GetOwner():KeyDown(IN_MOVELEFT)) then
             ang = Angle(0,90,0)
             vec = -vec
-        elseif self.Owner:KeyDown(IN_FORWARD) && self.Owner:KeyDown(IN_MOVERIGHT) then
+        elseif self:GetOwner():KeyDown(IN_FORWARD) && self:GetOwner():KeyDown(IN_MOVERIGHT) then
             ang = Angle(0,-45,0)
-        elseif self.Owner:KeyDown(IN_FORWARD) && self.Owner:KeyDown(IN_MOVELEFT) then
+        elseif self:GetOwner():KeyDown(IN_FORWARD) && self:GetOwner():KeyDown(IN_MOVELEFT) then
             ang = Angle(0,45,0)
-        elseif self.Owner:KeyDown(IN_BACK) && self.Owner:KeyDown(IN_MOVERIGHT) then
+        elseif self:GetOwner():KeyDown(IN_BACK) && self:GetOwner():KeyDown(IN_MOVERIGHT) then
             ang = Angle(0,45,0)
             vec = -vec
-        elseif self.Owner:KeyDown(IN_BACK) && self.Owner:KeyDown(IN_MOVELEFT) then
+        elseif self:GetOwner():KeyDown(IN_BACK) && self:GetOwner():KeyDown(IN_MOVELEFT) then
             ang = Angle(0,-45,0)
             vec = -vec
         end
         vec:Rotate(ang)
-        self.Owner:SetVelocity(-self.Owner:GetVelocity() + vec*power_forward + Vector(0,0,1)*power_jump)
+        self:GetOwner():SetVelocity(-self:GetOwner():GetVelocity() + vec*power_forward + Vector(0,0,1)*power_jump)
     end
 end
 
 function SWEP:HandleHoldTypes()
-    if self.Owner:MissingBothArms() && self:GetClass() != "weapon_mm_headbutt" then
+    if self:GetOwner():MissingBothArms() && self:GetClass() != "weapon_mm_headbutt" then
         if SERVER then
-            local owner = self.Owner
+            local owner = self:GetOwner()
             owner:DropWeapon(self)
             owner:StripWeapons()
             owner:Give("weapon_mm_headbutt")
         end
-    elseif self.Owner:MissingLeftArm() then
-        self.Owner:GetHands():SetBodygroup(1,1)
-    elseif self.Owner:MissingRightArm() then
+    elseif self:GetOwner():MissingLeftArm() then
+        self:GetOwner():GetHands():SetBodygroup(1,1)
+    elseif self:GetOwner():MissingRightArm() then
         self:SetHoldType("duel")
         self.ViewModelFlip = true
-        self.Owner:GetHands():SetBodygroup(1,1)
+        self:GetOwner():GetHands():SetBodygroup(1,1)
     else
-        if self.Owner:MissingBothLegs() && self.HoldTypeProne != "" then
+        if self:GetOwner():MissingBothLegs() && self.HoldTypeProne != "" then
             self:SetHoldType(self.HoldTypeProne)
         else
             self:SetHoldType(self.HoldType)
         end
         self.ViewModelFlip = false
-        self.Owner:GetHands():SetBodygroup(1,0)
+        self:GetOwner():GetHands():SetBodygroup(1,0)
     end
 end
 
 function SWEP:HandlePlayerHull()
-    if !IsValid(self.Owner) then return end
-    if self.Owner:MissingBothLegs() then
-        self.Owner:SetViewOffset(Vector(0,0,20))
-        self.Owner:SetViewOffsetDucked(Vector(0,0,20))
+    if !IsValid(self:GetOwner()) then return end
+    if self:GetOwner():MissingBothLegs() then
+        self:GetOwner():SetViewOffset(Vector(0,0,20))
+        self:GetOwner():SetViewOffsetDucked(Vector(0,0,20))
         
-        local bottom, top = self.Owner:GetHull()
-        local bottom2, top2 = self.Owner:GetHullDuck()
-        self.Owner:SetHull(bottom, Vector(16,16,25))
-        self.Owner:SetHullDuck(bottom2, Vector(16,16,25))
+        local bottom, top = self:GetOwner():GetHull()
+        local bottom2, top2 = self:GetOwner():GetHullDuck()
+        self:GetOwner():SetHull(bottom, Vector(16,16,25))
+        self:GetOwner():SetHullDuck(bottom2, Vector(16,16,25))
     else
-        if (self.Owner:GetSuperClass() == SUPERCLASS_WOLF) then
-            self.Owner:SetViewOffset(Vector(0, 0, 80))
+        if (self:GetOwner():GetSuperClass() == SUPERCLASS_WOLF) then
+            self:GetOwner():SetViewOffset(Vector(0, 0, 80))
         else
-            self.Owner:SetViewOffset(Vector(0, 0, 64))
+            self:GetOwner():SetViewOffset(Vector(0, 0, 64))
         end
-        self.Owner:SetViewOffsetDucked(Vector(0,0,28))
+        self:GetOwner():SetViewOffsetDucked(Vector(0,0,28))
         
-        local bottom, top = self.Owner:GetHull()
-        local bottom2, top2 = self.Owner:GetHullDuck()
-        self.Owner:SetHull(bottom, Vector(16,16,72))
-        self.Owner:SetHullDuck(bottom2, Vector(16,16,36))
+        local bottom, top = self:GetOwner():GetHull()
+        local bottom2, top2 = self:GetOwner():GetHullDuck()
+        self:GetOwner():SetHull(bottom, Vector(16,16,72))
+        self:GetOwner():SetHullDuck(bottom2, Vector(16,16,36))
     end
 end
 
 function SWEP:HandleDodgeRollStuff()
-    local ply = self.Owner
+    local ply = self:GetOwner()
     if !IsValid(ply) || !ply:Alive() then return end
     if !ply:CanUseAbility() then return end
     if ply:GetWalkSpeed() <= 1 then return end
@@ -496,10 +496,10 @@ function SWEP:HandleDodgeRollStuff()
 end
 
 function SWEP:RemoveSpawnProtection()
-    if self.Owner:HasStatusEffect(STATUS_SPAWNPROTECTED) then 
-        self.Owner:RemoveStatusEffect(STATUS_SPAWNPROTECTED) 
+    if self:GetOwner():HasStatusEffect(STATUS_SPAWNPROTECTED) then 
+        self:GetOwner():RemoveStatusEffect(STATUS_SPAWNPROTECTED) 
         if SERVER then 
-            self.Owner:GodDisable() 
+            self:GetOwner():GodDisable() 
         end 
     end
 end
@@ -542,19 +542,19 @@ function SWEP:HandleTaunts()
 end
 
 function SWEP:ExplodePlayer()
-    self.Owner:EmitSound("weapons/cannon/explosion1.wav",140)
-    self.Owner:SetKillFlag(KILL_GIB)
+    self:GetOwner():EmitSound("weapons/cannon/explosion1.wav",140)
+    self:GetOwner():SetKillFlag(KILL_GIB)
     if SERVER then
-        util.BlastDamage(self.Owner, self.Owner, self.Owner:GetPos()+Vector(0,0,70), 200, 140)
-        if self.Owner:IsValid() then
-            self.Owner:Ignite(7) 
+        util.BlastDamage(self:GetOwner(), self:GetOwner(), self:GetOwner():GetPos()+Vector(0,0,70), 200, 140)
+        if self:GetOwner():IsValid() then
+            self:GetOwner():Ignite(7) 
         end
     end
     
-    if IsValid(self.Owner) then
-        local dir = -self.Owner:GetAimVector()-Vector(0,0,self.Owner:GetAimVector().z)
+    if IsValid(self:GetOwner()) then
+        local dir = -self:GetOwner():GetAimVector()-Vector(0,0,self:GetOwner():GetAimVector().z)
         dir:Normalize()
-        self.Owner:SetVelocity(dir*250)
+        self:GetOwner():SetVelocity(dir*250)
     end
     local effectdata5 = EffectData()
     effectdata5:SetOrigin(self:GetPos())
@@ -579,41 +579,41 @@ end
 if CLIENT then
     local lastshoottime = 0
     function SWEP:DrawWorldModel()
-        if (self.Owner != nil && IsValid(self.Owner) && self.Owner:HasStatusEffect(STATUS_TAUNT)) then return end
-        if self:GetClass() == "weapon_mm_hook" && IsValid(self.Owner) && self.Owner:IsCharacter("Deer Haunter") then return end
+        if (self:GetOwner() != nil && IsValid(self:GetOwner()) && self:GetOwner():HasStatusEffect(STATUS_TAUNT)) then return end
+        if self:GetClass() == "weapon_mm_hook" && IsValid(self:GetOwner()) && self:GetOwner():IsCharacter("Deer Haunter") then return end
         local _Owner = self:GetOwner()
         self.WorldMdl = ClientsideModel(self.WorldModel)
-        if (IsValid(self.Owner)) then
+        if (IsValid(self:GetOwner())) then
             -- Specify a good position
             local offsetVec = Vector(0,0,0)
             local offsetAng = Angle(0, 0, 0)
             
-            local boneid = self.Owner:LookupBone("ValveBiped.Bip01_R_Hand") -- Right Hand
+            local boneid = self:GetOwner():LookupBone("ValveBiped.Bip01_R_Hand") -- Right Hand
             if !boneid then return end
             
-            if self.Owner:MissingRightArm() then
+            if self:GetOwner():MissingRightArm() then
                 self.WorldMdl:SetModel(string.sub(self.WorldModel, 1, string.len(self.WorldModel)-4).."_left.mdl")
             end
 
             self.WorldMdl:SetPos(self:GetPos())
             self.WorldMdl:SetAngles(self:GetAngles())
-            self.WorldMdl:SetParent(self.Owner)
+            self.WorldMdl:SetParent(self:GetOwner())
             self.WorldMdl:AddEffects(EF_BONEMERGE)
         else
             self.WorldMdl:SetPos(self:GetPos())
             self.WorldMdl:SetAngles(self:GetAngles())
         end
 
-        if (self.Owner:IsPlayer() && self.Owner:HasStatusEffect(STATUS_INVISIBLE)) then
+        if (self:GetOwner():IsPlayer() && self:GetOwner():HasStatusEffect(STATUS_INVISIBLE)) then
             self.WorldMdl:SetRenderMode(RENDERMODE_TRANSCOLOR)
-            self.WorldMdl:SetColor(Color(255, 255, 255, math.max(0, 100*(self.Owner:GetLastAttackTime()+1-CurTime()))))
+            self.WorldMdl:SetColor(Color(255, 255, 255, math.max(0, 100*(self:GetOwner():GetLastAttackTime()+1-CurTime()))))
         else
             self.WorldMdl:SetRenderMode(RENDERMODE_NORMAL)
             self.WorldMdl:SetColor(Color(255, 255, 255, 255))
         end
         self.WorldMdl:DrawModel()
         
-        if IsValid(self.Owner) then
+        if IsValid(self:GetOwner()) then
             if self.FlameThrower && self:GetMMFlame_FlameState() == 1 && self:GetMMBase_ReloadTimer() == 0 then
                 local effectdata4 = EffectData()
                 effectdata4:SetStart(self.WorldMdl:GetAttachment("1").Pos) 
@@ -623,26 +623,26 @@ if CLIENT then
                 util.Effect("mm_flamethrower_flame", effectdata4)
             end
             
-            if self.Owner:GetLastAttackTime() > lastshoottime && self.Base == "weapon_mm_basegun" then
+            if self:GetOwner():GetLastAttackTime() > lastshoottime && self.Base == "weapon_mm_basegun" then
                 if self.MuzzleEffect != "" then
                     local fx = EffectData();
-                    fx:SetOrigin(self.Owner:GetShootPos());
+                    fx:SetOrigin(self:GetOwner():GetShootPos());
                     fx:SetEntity(self);
-                    fx:SetStart(self.Owner:GetShootPos());
-                    fx:SetNormal(self.Owner:GetAimVector());
+                    fx:SetStart(self:GetOwner():GetShootPos());
+                    fx:SetNormal(self:GetOwner():GetAimVector());
                     fx:SetAttachment(1);
                     util.Effect(self.MuzzleEffect, fx);
                 end
                 if self.EjectEffect != "" then
                     local fx = EffectData();
-                    fx:SetOrigin(self.Owner:GetShootPos());
+                    fx:SetOrigin(self:GetOwner():GetShootPos());
                     fx:SetEntity(self);
-                    fx:SetStart(self.Owner:GetShootPos());
-                    fx:SetNormal(self.Owner:GetAimVector());
+                    fx:SetStart(self:GetOwner():GetShootPos());
+                    fx:SetNormal(self:GetOwner():GetAimVector());
                     fx:SetAttachment(2);
                     util.Effect(self.EjectEffect, fx);
                 end
-                lastshoottime = self.Owner:GetLastAttackTime()
+                lastshoottime = self:GetOwner():GetLastAttackTime()
             end            
             
             if self:GetMMBase_Charge() > 0 && self.ChargeEffect != "" then
@@ -681,7 +681,7 @@ end
 
 function SWEP:LookingAtShootable()
     local tr = LocalPlayer():GetEyeTrace()
-    return tr.Entity:IsPlayer() && !tr.Entity:HasStatusEffect(STATUS_INVISIBLE) && ((self.Owner:Team() == TEAM_COOPMONST && tr.Entity:Team() != self.Owner:Team()) || (self.Owner:Team() == TEAM_COOPOTHER && tr.Entity:Team() != self.Owner:Team()) || (tr.Entity:Team() == TEAM_MONST))
+    return tr.Entity:IsPlayer() && !tr.Entity:HasStatusEffect(STATUS_INVISIBLE) && ((self:GetOwner():Team() == TEAM_COOPMONST && tr.Entity:Team() != self:GetOwner():Team()) || (self:GetOwner():Team() == TEAM_COOPOTHER && tr.Entity:Team() != self:GetOwner():Team()) || (tr.Entity:Team() == TEAM_MONST))
 end
 
 local function boolToNumber(value)
@@ -712,8 +712,8 @@ if CLIENT then
         surface.SetTexture(Tex_white)
         surface.SetDrawColor(self.CrosshairChargeColor)
         surface.DrawPoly(cir)
-        //surface.SetDrawColor(0, 0, 0, 255)
-        //surface.DrawPoly(cir2)
+        --surface.SetDrawColor(0, 0, 0, 255)
+        --surface.DrawPoly(cir2)
     end
 
     local wratio = ScrW()/1600
@@ -721,22 +721,24 @@ if CLIENT then
 
     function SWEP:DrawHUD()
         
-        // Ammo counter
+        if not IsValid( self:GetOwner() ) then return end -- no need to draw a hud if there's no one to draw the HUD to
+
+        -- Ammo counter
         local ammo = self:Clip1()
         if ammo != -1 then 
             draw.SimpleTextOutlined(ammo, "MM_Font_Ammo", ScrW()-150*wratio, ScrH()-60*hratio, Color(255,105,0,255), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER, 2, Color(0,0,0,255))
         end
         
         local armMissing = 0
-        armMissing = 1+boolToNumber(self.Owner:MissingAnArm())*2
+        armMissing = 1+boolToNumber(self:GetOwner():MissingAnArm())*2
         local x = self.CrosshairXDisplacement
         local y = self.CrosshairYDisplacement*armMissing
         
         
-        if !self.Owner:HasStatusEffect(STATUS_CONCUSS) then
+        if !self:GetOwner():HasStatusEffect(STATUS_CONCUSS) then
 
-            // Charge
-            if self:GetMMBase_Charge() > 0 && (!self.Primary.HideCharge || self.Owner:KeyDown(IN_ATTACK2)) then
+            -- Charge
+            if self:GetMMBase_Charge() > 0 && (!self.Primary.HideCharge || self:GetOwner():KeyDown(IN_ATTACK2)) then
                 if self.CrosshairChargeType == CHARGETYPE_CIRCLE then
                     local size = armMissing*self.CrosshairChargeSize/2
                     size = wratio*(size/(1.5))
@@ -754,20 +756,20 @@ if CLIENT then
                 end
             end
             
-            // Recharge
-            if self.CrosshairRechargeMaterial != nil && self.Owner:GetWeaponCooldown(self) > 0 then
+            -- Recharge
+            if self.CrosshairRechargeMaterial != nil && self:GetOwner():GetWeaponCooldown(self) > 0 then
                 if self.CrosshairRechargeType == CHARGETYPE_SHRINK then
-                    local size = (self.CrosshairSize+self.CrosshairRechargeSize*(self.Owner:GetWeaponCooldown(self)/self.Owner:GetWeaponCooldownMax(self)))*armMissing
+                    local size = (self.CrosshairSize+self.CrosshairRechargeSize*(self:GetOwner():GetWeaponCooldown(self)/self:GetOwner():GetWeaponCooldownMax(self)))*armMissing
                     size = wratio*(size/1.5)
                     
                     surface.SetMaterial(self.CrosshairRechargeMaterial)
                     surface.SetDrawColor(self.CrosshairRechargeColor)
                     surface.DrawTexturedRect((ScrW()/2)-(size/2)+x, (ScrH()/2)-(size/2)+y, size, size)
                 elseif self.CrosshairRechargeType == CHARGETYPE_CIRCLE then
-                    //self:DrawPercentageCircle(ScrW()/2, ScrH()/2, self.CrosshairChargeSize/2, 100, 99-self:GetMMBase_Charge())
+                    --self:DrawPercentageCircle(ScrW()/2, ScrH()/2, self.CrosshairChargeSize/2, 100, 99-self:GetMMBase_Charge())
                 else 
                     local size = wratio*(self.CrosshairSize*armMissing/1.5)
-                    local charge = 1-(self.Owner:GetWeaponCooldown(self)/self.Owner:GetWeaponCooldownMax(self)) 
+                    local charge = 1-(self:GetOwner():GetWeaponCooldown(self)/self:GetOwner():GetWeaponCooldownMax(self)) 
                     local iheight = size*charge
                     local icharge = 1-charge
                     
@@ -777,7 +779,7 @@ if CLIENT then
                 end
             end
             
-            // Overcharge
+            -- Overcharge
             if self.CrosshairOverchargeMaterial != nil && self:GetMMBase_OverChargeAmount() > 0 then
                 if self.CrosshairOverchargeType == CHARGETYPE_SHRINK then
                     local size = (self.CrosshairSize+self.CrosshairOverchargeSize*(self:GetMMBase_OverChargeAmount()/100))*armMissing
@@ -800,7 +802,7 @@ if CLIENT then
                 end
             end
             
-            // Crosshair
+            -- Crosshair
             if self.CrosshairMaterial != nil then
                 local size = self.CrosshairSize*armMissing
                 size = wratio*(size/1.5)
@@ -850,7 +852,7 @@ function SWEP:SetWeaponHoldType(t)
 		t = "normal"
 		index = ActIndex[ t ]
 	end
-	//print(self.Owner:Name().." - "..self.Owner:GetNWInt("LegMissing"))
+	--print(self:GetOwner():Name().." - "..self:GetOwner():GetNWInt("LegMissing"))
 	
     self.ActivityTranslate = {}
     self.ActivityTranslate[ ACT_MP_STAND_IDLE ]					= index
@@ -881,84 +883,88 @@ function SWEP:ShouldDropOnDie()
 end
 
 function SWEP:OnDrop()
-	self.Owner = nil
-	timer.Simple(GetConVar("mm_cleanup_time"):GetInt(),function() if !IsValid(self) then return end if !self.Owner:IsPlayer() then  self:Remove() end end)
+	self:GetOwner() = nil
+	timer.Simple(GetConVar("mm_cleanup_time"):GetInt(),function() if !IsValid(self) then return end if !self:GetOwner():IsPlayer() then  self:Remove() end end)
 end
 
 function SWEP:TranslateActivity(act)
 
     /*
     if CLIENT && act != 990 && act != 996 && act != 997 && act != 1001 then
-        self.Owner:ChatPrint(act)
+        self:GetOwner():ChatPrint(act)
     end
     */
 
-	if (self.Owner:IsNPC()) then
-		if (self.ActivityTranslateAI[ act ]) then
-			return self.ActivityTranslateAI[ act ]
-		end
-		return -1
-	end
-    
-    if (self.ActivityTranslate[ act ] != nil) then
-        if self.Owner:MissingBothLegs() && (self.HoldTypeProne == "pistol" || self.HoldTypeProne == "revolver" || self.HoldType == "pistol" || self.HoldType == "revolver") then
-            if act == ACT_MP_STAND_IDLE then                return ACT_DOD_PRONE_AIM_PISTOL end
-            if act == ACT_MP_WALK then                      return ACT_DOD_PRONEWALK_IDLE_PISTOL end
-            if act == ACT_MP_RUN then                       return ACT_DOD_PRONEWALK_IDLE_PISTOL end
-            if act == ACT_MP_CROUCH_IDLE then               return ACT_DOD_PRONE_AIM_PISTOL end
-            if act == ACT_MP_CROUCHWALK then                return ACT_DOD_PRONEWALK_IDLE_PISTOL end
-            if act == ACT_MP_ATTACK_STAND_PRIMARYFIRE then  return ACT_DOD_PRIMARYATTACK_PRONE_PISTOL end
-            if act == ACT_MP_ATTACK_CROUCH_PRIMARYFIRE then return ACT_DOD_PRIMARYATTACK_PRONE_PISTOL end
-            if act == ACT_MP_RELOAD_STAND then              return ACT_DOD_RELOAD_PRONE_PISTOL end
-            if act == ACT_MP_RELOAD_CROUCH then             return ACT_DOD_RELOAD_PRONE_PISTOL end
-            if act == ACT_MP_JUMP then                      return ACT_DOD_PRONE_AIM_PISTOL end
-            if act == ACT_RANGE_ATTACK1 then                return ACT_DOD_PRONE_AIM_PISTOL end
-            if act == ACT_MP_SWIM then                      return ACT_DOD_PRONE_AIM_PISTOL end
-        elseif self.Owner:MissingBothLegs() && (self.HoldType == "melee" || self.HoldType == "melee2" || self.HoldType == "knife" || self.HoldType == "slam") then
-            if act == ACT_MP_STAND_IDLE then                return ACT_DOD_PRONE_AIM_SPADE end
-            if act == ACT_MP_WALK then                      return ACT_DOD_PRONEWALK_AIM_SPADE end
-            if act == ACT_MP_RUN then                       return ACT_DOD_PRONEWALK_AIM_SPADE end
-            if act == ACT_MP_CROUCH_IDLE then               return ACT_DOD_PRONE_AIM_SPADE end
-            if act == ACT_MP_CROUCHWALK then                return ACT_DOD_PRONEWALK_AIM_SPADE end
-            if act == ACT_MP_ATTACK_STAND_PRIMARYFIRE then  return ACT_DOD_PRIMARYATTACK_PRONE_SPADE end
-            if act == ACT_MP_ATTACK_CROUCH_PRIMARYFIRE then return ACT_DOD_PRIMARYATTACK_PRONE_SPADE end
-            if act == ACT_MP_RELOAD_STAND then              return ACT_DOD_PRONE_AIM_SPADE end
-            if act == ACT_MP_RELOAD_CROUCH then             return ACT_DOD_PRONE_AIM_SPADE end
-            if act == ACT_MP_JUMP then                      return ACT_DOD_PRONE_AIM_SPADE end
-            if act == ACT_RANGE_ATTACK1 then                return ACT_DOD_PRONE_AIM_SPADE end
-            if act == ACT_MP_SWIM then                      return ACT_DOD_PRONE_AIM_SPADE end
-        elseif self.Owner:MissingBothLegs() && (self.HoldType == "ar2" || self.HoldType == "smg" || self.HoldType == "crossbow" || self.HoldType == "rpg" || self.HoldType == "shotgun") then
-            if act == ACT_MP_STAND_IDLE then                return ACT_DOD_PRONE_AIM_30CAL end
-            if act == ACT_MP_WALK then                      return ACT_DOD_PRONEWALK_IDLE_30CAL end
-            if act == ACT_MP_RUN then                       return ACT_DOD_PRONEWALK_IDLE_30CAL end
-            if act == ACT_MP_CROUCH_IDLE then               return ACT_DOD_PRONE_AIM_30CAL end
-            if act == ACT_MP_CROUCHWALK then                return ACT_DOD_PRONEWALK_IDLE_30CAL end
-            if act == ACT_MP_ATTACK_STAND_PRIMARYFIRE then  return ACT_DOD_PRIMARYATTACK_PRONE_30CAL end
-            if act == ACT_MP_ATTACK_CROUCH_PRIMARYFIRE then return ACT_DOD_PRIMARYATTACK_PRONE_30CAL end
-            if act == ACT_MP_RELOAD_STAND then              return ACT_DOD_RELOAD_BAR end
-            if act == ACT_MP_RELOAD_CROUCH then             return ACT_DOD_RELOAD_BAR end
-            if act == ACT_MP_JUMP then                      return ACT_DOD_PRONE_AIM_30CAL end
-            if act == ACT_RANGE_ATTACK1 then                return ACT_DOD_PRONE_AIM_30CAL end
-            if act == ACT_MP_SWIM then                      return ACT_DOD_PRONE_AIM_30CAL end
-        elseif self.Owner:MissingBothLegs() && (self.HoldType == "grenade"|| self.HoldType == "normal") then
-            if act == ACT_MP_STAND_IDLE then                return ACT_DOD_PRONE_AIM_GREN_FRAG end
-            if act == ACT_MP_WALK then                      return ACT_DOD_PRONEWALK_AIM_GREN_FRAG end
-            if act == ACT_MP_RUN then                       return ACT_DOD_PRONEWALK_AIM_GREN_FRAG end
-            if act == ACT_MP_CROUCH_IDLE then               return ACT_DOD_PRONE_AIM_GREN_FRAG end
-            if act == ACT_MP_CROUCHWALK then                return ACT_DOD_PRONEWALK_AIM_GREN_FRAG end
-            if act == ACT_MP_ATTACK_STAND_PRIMARYFIRE then  return ACT_DOD_PRIMARYATTACK_PRONE_GREN_FRAG end
-            if act == ACT_MP_ATTACK_CROUCH_PRIMARYFIRE then return ACT_DOD_PRIMARYATTACK_PRONE_GREN_FRAG end
-            if act == ACT_MP_RELOAD_STAND then              return ACT_DOD_PRONE_AIM_GREN_FRAG end
-            if act == ACT_MP_RELOAD_CROUCH then             return ACT_DOD_PRONE_AIM_GREN_FRAG end
-            if act == ACT_MP_JUMP then                      return ACT_DOD_PRONE_AIM_GREN_FRAG end
-            if act == ACT_RANGE_ATTACK1 then                return ACT_DOD_PRONE_AIM_GREN_FRAG end
-            if act == ACT_MP_SWIM then                      return ACT_DOD_PRONE_AIM_GREN_FRAG end
-        else
-            return self.ActivityTranslate[ act ]
+    if IsValid( self:GetOwner() ) then
+
+        if (self:GetOwner():IsNPC()) then
+            if (self.ActivityTranslateAI[ act ]) then
+                return self.ActivityTranslateAI[ act ]
+            end
+            return -1
         end
+        
+        if (self.ActivityTranslate[ act ] != nil) then
+            if self:GetOwner():MissingBothLegs() && (self.HoldTypeProne == "pistol" || self.HoldTypeProne == "revolver" || self.HoldType == "pistol" || self.HoldType == "revolver") then
+                if act == ACT_MP_STAND_IDLE then                return ACT_DOD_PRONE_AIM_PISTOL end
+                if act == ACT_MP_WALK then                      return ACT_DOD_PRONEWALK_IDLE_PISTOL end
+                if act == ACT_MP_RUN then                       return ACT_DOD_PRONEWALK_IDLE_PISTOL end
+                if act == ACT_MP_CROUCH_IDLE then               return ACT_DOD_PRONE_AIM_PISTOL end
+                if act == ACT_MP_CROUCHWALK then                return ACT_DOD_PRONEWALK_IDLE_PISTOL end
+                if act == ACT_MP_ATTACK_STAND_PRIMARYFIRE then  return ACT_DOD_PRIMARYATTACK_PRONE_PISTOL end
+                if act == ACT_MP_ATTACK_CROUCH_PRIMARYFIRE then return ACT_DOD_PRIMARYATTACK_PRONE_PISTOL end
+                if act == ACT_MP_RELOAD_STAND then              return ACT_DOD_RELOAD_PRONE_PISTOL end
+                if act == ACT_MP_RELOAD_CROUCH then             return ACT_DOD_RELOAD_PRONE_PISTOL end
+                if act == ACT_MP_JUMP then                      return ACT_DOD_PRONE_AIM_PISTOL end
+                if act == ACT_RANGE_ATTACK1 then                return ACT_DOD_PRONE_AIM_PISTOL end
+                if act == ACT_MP_SWIM then                      return ACT_DOD_PRONE_AIM_PISTOL end
+            elseif self:GetOwner():MissingBothLegs() && (self.HoldType == "melee" || self.HoldType == "melee2" || self.HoldType == "knife" || self.HoldType == "slam") then
+                if act == ACT_MP_STAND_IDLE then                return ACT_DOD_PRONE_AIM_SPADE end
+                if act == ACT_MP_WALK then                      return ACT_DOD_PRONEWALK_AIM_SPADE end
+                if act == ACT_MP_RUN then                       return ACT_DOD_PRONEWALK_AIM_SPADE end
+                if act == ACT_MP_CROUCH_IDLE then               return ACT_DOD_PRONE_AIM_SPADE end
+                if act == ACT_MP_CROUCHWALK then                return ACT_DOD_PRONEWALK_AIM_SPADE end
+                if act == ACT_MP_ATTACK_STAND_PRIMARYFIRE then  return ACT_DOD_PRIMARYATTACK_PRONE_SPADE end
+                if act == ACT_MP_ATTACK_CROUCH_PRIMARYFIRE then return ACT_DOD_PRIMARYATTACK_PRONE_SPADE end
+                if act == ACT_MP_RELOAD_STAND then              return ACT_DOD_PRONE_AIM_SPADE end
+                if act == ACT_MP_RELOAD_CROUCH then             return ACT_DOD_PRONE_AIM_SPADE end
+                if act == ACT_MP_JUMP then                      return ACT_DOD_PRONE_AIM_SPADE end
+                if act == ACT_RANGE_ATTACK1 then                return ACT_DOD_PRONE_AIM_SPADE end
+                if act == ACT_MP_SWIM then                      return ACT_DOD_PRONE_AIM_SPADE end
+            elseif self:GetOwner():MissingBothLegs() && (self.HoldType == "ar2" || self.HoldType == "smg" || self.HoldType == "crossbow" || self.HoldType == "rpg" || self.HoldType == "shotgun") then
+                if act == ACT_MP_STAND_IDLE then                return ACT_DOD_PRONE_AIM_30CAL end
+                if act == ACT_MP_WALK then                      return ACT_DOD_PRONEWALK_IDLE_30CAL end
+                if act == ACT_MP_RUN then                       return ACT_DOD_PRONEWALK_IDLE_30CAL end
+                if act == ACT_MP_CROUCH_IDLE then               return ACT_DOD_PRONE_AIM_30CAL end
+                if act == ACT_MP_CROUCHWALK then                return ACT_DOD_PRONEWALK_IDLE_30CAL end
+                if act == ACT_MP_ATTACK_STAND_PRIMARYFIRE then  return ACT_DOD_PRIMARYATTACK_PRONE_30CAL end
+                if act == ACT_MP_ATTACK_CROUCH_PRIMARYFIRE then return ACT_DOD_PRIMARYATTACK_PRONE_30CAL end
+                if act == ACT_MP_RELOAD_STAND then              return ACT_DOD_RELOAD_BAR end
+                if act == ACT_MP_RELOAD_CROUCH then             return ACT_DOD_RELOAD_BAR end
+                if act == ACT_MP_JUMP then                      return ACT_DOD_PRONE_AIM_30CAL end
+                if act == ACT_RANGE_ATTACK1 then                return ACT_DOD_PRONE_AIM_30CAL end
+                if act == ACT_MP_SWIM then                      return ACT_DOD_PRONE_AIM_30CAL end
+            elseif self:GetOwner():MissingBothLegs() && (self.HoldType == "grenade"|| self.HoldType == "normal") then
+                if act == ACT_MP_STAND_IDLE then                return ACT_DOD_PRONE_AIM_GREN_FRAG end
+                if act == ACT_MP_WALK then                      return ACT_DOD_PRONEWALK_AIM_GREN_FRAG end
+                if act == ACT_MP_RUN then                       return ACT_DOD_PRONEWALK_AIM_GREN_FRAG end
+                if act == ACT_MP_CROUCH_IDLE then               return ACT_DOD_PRONE_AIM_GREN_FRAG end
+                if act == ACT_MP_CROUCHWALK then                return ACT_DOD_PRONEWALK_AIM_GREN_FRAG end
+                if act == ACT_MP_ATTACK_STAND_PRIMARYFIRE then  return ACT_DOD_PRIMARYATTACK_PRONE_GREN_FRAG end
+                if act == ACT_MP_ATTACK_CROUCH_PRIMARYFIRE then return ACT_DOD_PRIMARYATTACK_PRONE_GREN_FRAG end
+                if act == ACT_MP_RELOAD_STAND then              return ACT_DOD_PRONE_AIM_GREN_FRAG end
+                if act == ACT_MP_RELOAD_CROUCH then             return ACT_DOD_PRONE_AIM_GREN_FRAG end
+                if act == ACT_MP_JUMP then                      return ACT_DOD_PRONE_AIM_GREN_FRAG end
+                if act == ACT_RANGE_ATTACK1 then                return ACT_DOD_PRONE_AIM_GREN_FRAG end
+                if act == ACT_MP_SWIM then                      return ACT_DOD_PRONE_AIM_GREN_FRAG end
+            else
+                return self.ActivityTranslate[ act ]
+            end
+        end
+
     end
 
-	return -1
+    return -1
 
 end
 
@@ -985,23 +991,23 @@ if CLIENT then
 	
 	function SWEP:ManipulateViewModel(pos, ang)
 
-		if !IsValid(self.Owner) then return end
+		if !IsValid(self:GetOwner()) then return end
 		local ply = LocalPlayer()
 		local weapon = ply:GetActiveWeapon()
-		local walkspeed = self.Owner:GetVelocity():Length() 
+		local walkspeed = self:GetOwner():GetVelocity():Length() 
 		
 		
 		/*--------------------------------------------
 				  Animation Transition Speed 
 		--------------------------------------------*/
 		
-		if self.LandTime > RealTime() && !(self.Owner:IsOnGround()) then
+		if self.LandTime > RealTime() && !(self:GetOwner():IsOnGround()) then
 			TestVector = LerpVector(20*FrameTime(),TestVector,TestVectorTarget) 
             TestVectorAngle = LerpVector(20*FrameTime(),TestVectorAngle,TestVectorAngleTarget)
-        elseif IsValid(self.Owner) && !(self.Owner:KeyDown(IN_DUCK) && walkspeed > 40) then
+        elseif IsValid(self:GetOwner()) && !(self:GetOwner():KeyDown(IN_DUCK) && walkspeed > 40) then
             TestVector = LerpVector(10*FrameTime(),TestVector,TestVectorTarget) 
             TestVectorAngle = LerpVector(10*FrameTime(),TestVectorAngle,TestVectorAngleTarget) 
-        elseif (self.Owner:KeyDown(IN_DUCK) || ply:MissingBothLegs()) && walkspeed > 40 then 
+        elseif (self:GetOwner():KeyDown(IN_DUCK) || ply:MissingBothLegs()) && walkspeed > 40 then 
             TestVector = LerpVector(4*FrameTime(),TestVector,TestVectorTarget) 
             TestVectorAngle = LerpVector(4*FrameTime(),TestVectorAngle,TestVectorAngleTarget) 
 		else
@@ -1016,18 +1022,18 @@ if CLIENT then
 		pos = pos + TestVector.z * ang:Up()
 		pos = pos + TestVector.y * ang:Forward()
 		pos = pos + TestVector.x * ang:Right()
-		if !IsValid(self.Owner) then return end
-		local Tr = self.Owner:GetEyeTrace()
+		if !IsValid(self:GetOwner()) then return end
+		local Tr = self:GetOwner():GetEyeTrace()
 		
 
         /*--------------------------------------------
 		Ironsight, Crouching, Near Wall, Ladder and Sprinting
 		--------------------------------------------*/
 		
-        if self.Owner:GetMoveType() == MOVETYPE_LADDER then 
+        if self:GetOwner():GetMoveType() == MOVETYPE_LADDER then 
             TestVectorTarget = Vector(0,0,2)
             TestVectorAngleTarget = Vector(-40,0,0)
-        elseif self.Owner:KeyDown(IN_DUCK) then 
+        elseif self:GetOwner():KeyDown(IN_DUCK) then 
             TestVectorTarget = self.CrouchPos
             TestVectorAngleTarget = self.CrouchAng
         else
@@ -1041,10 +1047,10 @@ if CLIENT then
         --------------------------------------------*/
 		
         if self:GetClass() != "weapon_mm_wand" then
-            if (self.Owner:MissingAnArm() && self:GetMMBase_ReloadTimer() > CurTime() && ((self:GetMMBase_ReloadTimer()-CurTime())/(self.Owner:GetViewModel():SequenceDuration()*(1/self.Owner:GetViewModel():GetPlaybackRate()))) > 0.1)  || ((self:GetClass() == "weapon_mm_pumpshotgun" || self:GetClass() == "weapon_mm_repeater") && self:GetMMBase_ReloadShotgunState() != 0 && self.Owner:MissingAnArm()) then
+            if (self:GetOwner():MissingAnArm() && self:GetMMBase_ReloadTimer() > CurTime() && ((self:GetMMBase_ReloadTimer()-CurTime())/(self:GetOwner():GetViewModel():SequenceDuration()*(1/self:GetOwner():GetViewModel():GetPlaybackRate()))) > 0.1)  || ((self:GetClass() == "weapon_mm_pumpshotgun" || self:GetClass() == "weapon_mm_repeater") && self:GetMMBase_ReloadShotgunState() != 0 && self:GetOwner():MissingAnArm()) then
                 TestVectorTarget = TestVectorTarget + Vector(10,0,5)
                 TestVectorAngleTarget = TestVectorAngleTarget + Vector(-50,0,0)
-            elseif self.Owner:MissingAnArm() && self:GetMMBase_ReloadTimer() > CurTime() && ((self:GetMMBase_ReloadTimer()-CurTime())/(self.Owner:GetViewModel():SequenceDuration()*(1/self.Owner:GetViewModel():GetPlaybackRate()))) <= 0.1 then
+            elseif self:GetOwner():MissingAnArm() && self:GetMMBase_ReloadTimer() > CurTime() && ((self:GetMMBase_ReloadTimer()-CurTime())/(self:GetOwner():GetViewModel():SequenceDuration()*(1/self:GetOwner():GetViewModel():GetPlaybackRate()))) <= 0.1 then
                 TestVectorAngleTarget = TestVectorAngleTarget + Vector(-20,0,0)
             end
         end
@@ -1055,28 +1061,28 @@ if CLIENT then
 		--------------------------------------------*/
         
         -- Custom jumping animation
-        if !self.Owner:IsOnGround() then
+        if !self:GetOwner():IsOnGround() then
             self.LandTime = RealTime() + 0.31
         end
         
-        if (self.Owner:GetMoveType() == MOVETYPE_NOCLIP || self.Owner:GetMoveType() == MOVETYPE_LADDER || self.Owner:WaterLevel() > 1) || (self.LandTime < RealTime() && self.LandTime != 0) then
+        if (self:GetOwner():GetMoveType() == MOVETYPE_NOCLIP || self:GetOwner():GetMoveType() == MOVETYPE_LADDER || self:GetOwner():WaterLevel() > 1) || (self.LandTime < RealTime() && self.LandTime != 0) then
             self.LandTime = 0
             self.JumpTime = 0
         end
 
-        if self.Owner:KeyDownLast(IN_JUMP) then
+        if self:GetOwner():KeyDownLast(IN_JUMP) then
             if self.JumpTime == 0 then
                 self.JumpTime = RealTime() + 0.31
                 self.LandTime = 0
             end
         end
     
-        -- Use this if you gotta https://www.desmos.com/calculator/cahqdxeshd
+        -- Use this if you gotta https:--www.desmos.com/calculator/cahqdxeshd
         local function BezierY(f,a,b,c)
             f = f*3.2258
             return (1-f)^2 *a + 2*(1-f)*f*b + (f^2)*c
         end
-        if self.Owner:WaterLevel() < 1 then
+        if self:GetOwner():WaterLevel() < 1 then
             if self.JumpTime > RealTime() then
                 local f = 0.31 - (self.JumpTime-RealTime())
 
@@ -1090,7 +1096,7 @@ if CLIENT then
                 
                 TestVectorTarget = TestVectorTarget + Vector(xx, yy, zz)
                 TestVectorAngleTarget = TestVectorAngleTarget + Vector(pt, yw, rl)
-            elseif !ply:IsOnGround() && (ply:GetMoveType() != MOVETYPE_NOCLIP && self.Owner:GetMoveType() != MOVETYPE_LADDER) then
+            elseif !ply:IsOnGround() && (ply:GetMoveType() != MOVETYPE_NOCLIP && self:GetOwner():GetMoveType() != MOVETYPE_LADDER) then
                 local BreatheTime = RealTime() * 30
                 TestVectorTarget = TestVectorTarget + Vector(math.cos(BreatheTime/2)/16, 0, -5+(math.sin(BreatheTime/3)/16))
                 TestVectorAngleTarget = TestVectorAngleTarget + Vector(10-(math.sin(BreatheTime/3)/4), math.cos(BreatheTime/2)/4, -5)
@@ -1109,7 +1115,7 @@ if CLIENT then
                 TestVectorAngleTarget = TestVectorAngleTarget + Vector(pt, yw, rl)
             end
         else
-            TestVectorTarget = TestVectorTarget + Vector(0 ,0 , math.Clamp(self.Owner:GetVelocity().z / 1000,-1,1))
+            TestVectorTarget = TestVectorTarget + Vector(0 ,0 , math.Clamp(self:GetOwner():GetVelocity().z / 1000,-1,1))
         end
 		
 		
@@ -1122,18 +1128,18 @@ if CLIENT then
 				local BreatheTime = RealTime() * 16
                 local roll = 0
                 local yaw = 0
-                if (ply:MissingLeftArm() && self.Owner:KeyDown(IN_MOVELEFT)) || self.Owner:KeyDown(IN_MOVERIGHT) then
+                if (ply:MissingLeftArm() && self:GetOwner():KeyDown(IN_MOVELEFT)) || self:GetOwner():KeyDown(IN_MOVERIGHT) then
                     if ((self.Primary.ChargeCrouch || self.Secondary.ChargeCrouch) && self:GetMMBase_Charge() != 0) || ply:MissingALeg() then
                         roll = 0
                     else
-                        roll = -7*(walkspeed/self.Owner:GetWalkSpeed())
-                        if self.Owner:KeyDown(IN_MOVELEFT) then
+                        roll = -7*(walkspeed/self:GetOwner():GetWalkSpeed())
+                        if self:GetOwner():KeyDown(IN_MOVELEFT) then
                             roll = -roll
                         end
                     end
-                elseif (ply:MissingLeftArm() && self.Owner:KeyDown(IN_MOVERIGHT)) || self.Owner:KeyDown(IN_MOVELEFT) then
+                elseif (ply:MissingLeftArm() && self:GetOwner():KeyDown(IN_MOVERIGHT)) || self:GetOwner():KeyDown(IN_MOVELEFT) then
                     yaw = 4*(walkspeed/200)
-                    if (self.Owner:KeyDown(IN_MOVERIGHT)) then
+                    if (self:GetOwner():KeyDown(IN_MOVERIGHT)) then
                         yaw = -yaw
                     end
                 end

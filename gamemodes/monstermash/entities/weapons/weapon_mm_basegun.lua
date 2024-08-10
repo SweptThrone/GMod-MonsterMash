@@ -234,7 +234,7 @@ function SWEP:PrimaryAttack()
     if self.UseWindup && (self:GetMMBase_Windup() == 0 || self:GetMMBase_Windup() > CurTime()) then return end
     if self:GetMMBase_BurstCount() != 0 then return end
     if self:GetMMBase_ReloadShotgunState() == 2 then self:SetMMBase_ReloadShotgunState(3) end
-    if self.Primary.Chargeup && !self.Primary.ChargeShootMax && self.Owner:KeyDown(IN_ATTACK) then return end
+    if self.Primary.Chargeup && !self.Primary.ChargeShootMax && self:GetOwner():KeyDown(IN_ATTACK) then return end
     if self.Primary.Chargeup && !self.Primary.ChargeEarly && self:GetMMBase_Charge() != 100 then return end
     self:RemoveSpawnProtection()
     self:DoAttack(self.Primary)
@@ -244,7 +244,7 @@ end
 function SWEP:SecondaryAttack()
     if self:GetMMBase_BurstCount() != 0 then return end
     if self:GetMMBase_ReloadShotgunState() == 2 then self:SetMMBase_ReloadShotgunState(3) end
-    if self.Secondary.Chargeup && self.Owner:KeyDown(IN_ATTACK2) then return end
+    if self.Secondary.Chargeup && self:GetOwner():KeyDown(IN_ATTACK2) then return end
     if self.Secondary.Chargeup && !self.Secondary.ChargeEarly && self:GetMMBase_Charge() != 100 then return end
     self:RemoveSpawnProtection()
     self:DoAttack(self.Secondary)
@@ -270,7 +270,7 @@ function SWEP:HandleTimers()
             self:SetMMBase_ReloadTimerAmmo(0)
         elseif (self:Clip1() != 0) && self.ReloadInTime != 0 then
             self:SetClip1(0)
-            self:SetMMBase_ReloadTimerAmmo(CurTime() + self.ReloadInTime/self.Owner:GetViewModel():GetPlaybackRate())
+            self:SetMMBase_ReloadTimerAmmo(CurTime() + self.ReloadInTime/self:GetOwner():GetViewModel():GetPlaybackRate())
         else
             if self.ReloadAmount != -1 then
                 self:SetClip1(math.min(self:Clip1() + self.ReloadAmount, self.ReloadAmountMax))
@@ -294,11 +294,11 @@ function SWEP:HandleTimers()
     if self:GetMMBase_ReloadShotgunState() == 2 && self:GetMMBase_ReloadShotgunTimer() < CurTime() then
         self:SendWeaponAnim(self.ShotgunReloadAnimLoop)
         
-        if self.Owner:MissingAnArm() && self.ReloadSlowedByArm then
-            self.Owner:GetViewModel():SetPlaybackRate(0.5)
+        if self:GetOwner():MissingAnArm() && self.ReloadSlowedByArm then
+            self:GetOwner():GetViewModel():SetPlaybackRate(0.5)
         end
         
-        local time = self.Owner:GetViewModel():SequenceDuration()/self.Owner:GetViewModel():GetPlaybackRate()
+        local time = self:GetOwner():GetViewModel():SequenceDuration()/self:GetOwner():GetViewModel():GetPlaybackRate()
         self:SetMMBase_ReloadTimer(CurTime() + time*10)
         self:SetMMBase_ReloadShotgunTimer(CurTime() + time)
         
@@ -308,11 +308,11 @@ function SWEP:HandleTimers()
     if self:GetMMBase_ReloadShotgunState() == 3 && self:GetMMBase_ReloadShotgunTimer() < CurTime() then
         self:SendWeaponAnim(self.ShotgunReloadAnimOut)
         
-        if self.Owner:MissingAnArm() && self.ReloadSlowedByArm then
-            self.Owner:GetViewModel():SetPlaybackRate(0.5)
+        if self:GetOwner():MissingAnArm() && self.ReloadSlowedByArm then
+            self:GetOwner():GetViewModel():SetPlaybackRate(0.5)
         end
         
-        local time = self.Owner:GetViewModel():SequenceDuration()/self.Owner:GetViewModel():GetPlaybackRate()
+        local time = self:GetOwner():GetViewModel():SequenceDuration()/self:GetOwner():GetViewModel():GetPlaybackRate()
         self:SetMMBase_ReloadTimer(CurTime() + time)
         self:SetMMBase_ReloadShotgunTimer(CurTime() + time)
         self:SetMMBase_ReloadShotgunState(4)
@@ -341,31 +341,31 @@ function SWEP:DoFireDelay(mode)
             delay = mode.BurstTime
         end
     end
-    if self.Owner:HasStatusEffect(STATUS_GOREJARED) then
+    if self:GetOwner():HasStatusEffect(STATUS_GOREJARED) then
         delay = delay*self.GoreJarDelay
     end
     self:SetMMBase_ShootTimer(CurTime() + delay)
 end
 
 function SWEP:HandleHoldTypes()
-    if !IsValid(self.Owner) || !self.Owner:Alive() then return end
-    if self.Owner:MissingBothArms() && self:GetClass() != "weapon_mm_headbutt" then
+    if !IsValid(self:GetOwner()) || !self:GetOwner():Alive() then return end
+    if self:GetOwner():MissingBothArms() && self:GetClass() != "weapon_mm_headbutt" then
         if SERVER then
-            local owner = self.Owner
+            local owner = self:GetOwner()
             owner:DropWeapon(self)
             owner:StripWeapons()
             owner:Give("weapon_mm_headbutt")
         end
-    elseif self.Owner:MissingLeftArm() then
-        self.Owner:GetHands():SetBodygroup(1,1)
-    elseif self.Owner:MissingRightArm() then
+    elseif self:GetOwner():MissingLeftArm() then
+        self:GetOwner():GetHands():SetBodygroup(1,1)
+    elseif self:GetOwner():MissingRightArm() then
         if (self:GetMMBase_LastShotType() == 2 && self.HoldTypeAttack2 != "" && self:GetMMBase_ShootTimer() > CurTime()) then
             self:SetHoldType(self.HoldTypeAttack2)
         else
             self:SetHoldType("duel")
         end
         self.ViewModelFlip = true
-        self.Owner:GetHands():SetBodygroup(1,1)
+        self:GetOwner():GetHands():SetBodygroup(1,1)
     else
         if self:GetMMBase_ShootTimer() > CurTime() then
             if (self:GetMMBase_LastShotType() == 2 && self.HoldTypeAttack2 != "") then
@@ -375,17 +375,17 @@ function SWEP:HandleHoldTypes()
             end
         elseif self:GetMMBase_ReloadTimer() > CurTime() then
             self:SetHoldType(self.HoldTypeReload)
-        elseif self.Owner:Crouching() then
+        elseif self:GetOwner():Crouching() then
             self:SetHoldType(self.HoldTypeCrouch)
         else
-            if self.Owner:MissingBothLegs() && self.HoldTypeProne != "" then
+            if self:GetOwner():MissingBothLegs() && self.HoldTypeProne != "" then
                 self:SetHoldType(self.HoldTypeProne)
             else
                 self:SetHoldType(self.HoldType)
             end
         end
         self.ViewModelFlip = false
-        self.Owner:GetHands():SetBodygroup(1,0)
+        self:GetOwner():GetHands():SetBodygroup(1,0)
     end
 end
 
@@ -410,12 +410,12 @@ function SWEP:Holster(wep)
     if self.IdleSound != nil then
         self:EmitSound("empty.wav", 75, 100, 1, CHAN_VOICE2)
     end
-    self.Owner.PrevWeapon = self
+    self:GetOwner().PrevWeapon = self
     return true
 end
 
 function SWEP:MM_ShootBullet(mode)
-    if !self.Owner:IsOnGround() then return end
+    if !self:GetOwner():IsOnGround() then return end
     if self:GetMMBase_ReloadTimer() != 0 || self:GetMMBase_ShootTimer() != 0 then return end
     if self:Clip1() == 0 || (mode.TakeAmmoAffectsShootability && self:Clip1()-mode.TakeAmmo < 0) then 
         if (!GetConVar("mm_autoreload"):GetBool()) then
@@ -431,8 +431,8 @@ function SWEP:MM_ShootBullet(mode)
     else
         bullet.Num = mode.NumberofShots 
     end
-    bullet.Src = self.Owner:GetShootPos() 
-    bullet.Dir = (self.Owner:EyeAngles() + self.Owner:GetViewPunchAngles()):Forward()
+    bullet.Src = self:GetOwner():GetShootPos() 
+    bullet.Dir = (self:GetOwner():EyeAngles() + self:GetOwner():GetViewPunchAngles()):Forward()
     
     // Bullet spread
     if mode.ChargeShrinksXHair then
@@ -441,10 +441,10 @@ function SWEP:MM_ShootBullet(mode)
         bullet.Spread = Vector(mode.Spread * 0.1 , mode.Spread * 0.1, 0)
     end
     if (mode.ArmMissingAffectsAim) then
-        bullet.Spread = bullet.Spread*(1+boolToNumber(self.Owner:MissingAnArm())*3)
+        bullet.Spread = bullet.Spread*(1+boolToNumber(self:GetOwner():MissingAnArm())*3)
     end
     if (mode.Magnetism && (self:GetMMBase_Charge() == 100 || !mode.MaxChargeToMagnetise)) then
-        local tr = self.Owner:GetEyeTrace().Entity
+        local tr = self:GetOwner():GetEyeTrace().Entity
         if (tr != nil && tr:IsPlayer()) then
             bullet.Spread = Vector(0,0,0)
         end
@@ -485,7 +485,7 @@ function SWEP:MM_ShootBullet(mode)
     
     if self.MakeThumperDust then
         local effectdata = EffectData()
-        effectdata:SetOrigin(self.Owner:GetPos())
+        effectdata:SetOrigin(self:GetOwner():GetPos())
         effectdata:SetScale(128)
         util.Effect("ThumperDust", effectdata)
     end
@@ -494,9 +494,9 @@ function SWEP:MM_ShootBullet(mode)
         self:SetMMBase_ReloadAutoTimer(CurTime()+self.AutoReloadTime)
     end
      
-    self.Owner:FireBullets(bullet) 
+    self:GetOwner():FireBullets(bullet) 
     if !mode.LoopSound then
-        if IsValid(self.Owner) && self.Owner:HasStatusEffect(STATUS_GOREJARED) then
+        if IsValid(self:GetOwner()) && self:GetOwner():HasStatusEffect(STATUS_GOREJARED) then
             self:EmitSound(mode.Sound, 100, 50)
         else
             self:EmitSound(mode.Sound, 100)
@@ -519,7 +519,7 @@ function SWEP:MM_ShootBullet(mode)
             end
             
         else
-            if self.Owner:HasStatusEffect(STATUS_GOREJARED) then
+            if self:GetOwner():HasStatusEffect(STATUS_GOREJARED) then
                 self.LoopSound:ChangePitch(50, 0)
             else
                 self.LoopSound:ChangePitch(100, 0)
@@ -527,18 +527,18 @@ function SWEP:MM_ShootBullet(mode)
         end
     end
     
-    if (self.Owner:IsPlayer()) then
-        self.Owner:SetLastAttackTime()
+    if (self:GetOwner():IsPlayer()) then
+        self:GetOwner():SetLastAttackTime()
     end
     
     self:SetMMBase_OverChargeTime(0)
-    self.Owner:ViewPunch(Angle(self:RandomRange(-mode.Recoil/2, mode.Recoil/2) , self:RandomRange(-mode.Recoil/2, mode.Recoil/2), 0)) 
+    self:GetOwner():ViewPunch(Angle(self:RandomRange(-mode.Recoil/2, mode.Recoil/2) , self:RandomRange(-mode.Recoil/2, mode.Recoil/2), 0)) 
     self:SetClip1(math.Clamp(self:Clip1()-mode.TakeAmmo, 0, self:GetMaxClip1()))
     self:SetMMBase_OverChargeAmount(self:GetMMBase_OverChargeAmount() + mode.OverChargeAmount)
     self:DoFireDelay(mode)
     
     if (mode.SpecialCooldown != 0) then
-        self.Owner:SetWeaponCooldown(self, mode.SpecialCooldown)
+        self:GetOwner():SetWeaponCooldown(self, mode.SpecialCooldown)
     end
 end
 
@@ -584,7 +584,7 @@ function SWEP:MM_BulletCallback(attacker, tr, dmginfo, mode)
     if mode.BulletArc then
         if tr.Entity:IsPlayer() then
             local HitList = {
-                //self.Owner,
+                //self:GetOwner(),
                 tr.Entity
             }
             self:BounceCallback(tr, HitList, 1, mode)                
@@ -601,7 +601,7 @@ function SWEP:BounceCallback(tr, HitList, num, mode)
     for k, v in pairs(player.GetAll()) do
         if (v:Team() != TEAM_SPECT && v:Team() != TEAM_COOPDEAD) then
             local maxdist = dist
-            if v == self.Owner then
+            if v == self:GetOwner() then
                 maxdist = dist/2
             end
             if !table.HasValue(HitList, v) && v:GetPos():Distance(tr.HitPos) < maxdist then
@@ -634,11 +634,11 @@ function SWEP:BounceCallback(tr, HitList, num, mode)
         bullet.AmmoType = mode.Ammo 
         bullet.IgnoreEntity = tr.Entity
         bullet.Callback = function(attacker, tr2, dmginfo)
-            if mode.IgniteIfDamage != -1 && dmginfo:GetDamage() >= bullet.Damage && tr.Entity:IsPlayer() && tr.Entity:CanBeDamagedBy(self.Owner) then
+            if mode.IgniteIfDamage != -1 && dmginfo:GetDamage() >= bullet.Damage && tr.Entity:IsPlayer() && tr.Entity:CanBeDamagedBy(self:GetOwner()) then
                 tr.Entity:SetStatusEffect(STATUS_ONFIRE, dmginfo, 3)
             end
             dmginfo:SetInflictor(self)
-            dmginfo:SetAttacker(self.Owner)
+            dmginfo:SetAttacker(self:GetOwner())
             dmginfo:SetDamageType(DMG_BULLET)
             self:BounceCallback(tr2, HitList, num, mode)                
 		end
@@ -647,9 +647,9 @@ function SWEP:BounceCallback(tr, HitList, num, mode)
 end
 
 function SWEP:MM_ShootProjectile(mode)
-    if !self.Owner:IsOnGround() then return end
+    if !self:GetOwner():IsOnGround() then return end
     if self:GetMMBase_ReloadTimer() != 0 || self:GetMMBase_ShootTimer() != 0 then return end
-    if (mode.SpecialCooldown != 0 && self.Owner:GetWeaponCooldown(self) > 0) then return end
+    if (mode.SpecialCooldown != 0 && self:GetOwner():GetWeaponCooldown(self) > 0) then return end
     if (mode.TakeAmmo != 0 && self:Clip1() == 0) || (mode.TakeAmmoAffectsShootability && self:Clip1()-mode.TakeAmmo < 0) then 
         if (!GetConVar("mm_autoreload"):GetBool()) then
             self:EmitSound("weapons/shotgun/shotgun_empty.wav", 75, 100, 1, CHAN_ITEM) 
@@ -663,22 +663,22 @@ function SWEP:MM_ShootProjectile(mode)
 
         if (!IsValid(ent)) then return end
         ent.Force = mode.ProjectileForce + mode.ChargeForce*self:GetMMBase_Charge()/100
-        ent.Owner = self.Owner
+        ent:GetOwner() = self:GetOwner()
         ent.Inflictor = self
         if (mode.ProjectileTarget) then
-            ent.Target = self.Owner:GetEyeTrace().Entity
+            ent.Target = self:GetOwner():GetEyeTrace().Entity
         end
         if (mode.ProjectilePassDamage) then
             ent.Damage = mode.Damage
         end
-        ent.Dir = self.Owner:GetAimVector()
-        ent:SetPos(self.Owner:EyePos() + (self.Owner:GetAimVector() * 64))
-        ent:SetAngles(self.Owner:EyeAngles())
+        ent.Dir = self:GetOwner():GetAimVector()
+        ent:SetPos(self:GetOwner():EyePos() + (self:GetOwner():GetAimVector() * 64))
+        ent:SetAngles(self:GetOwner():EyeAngles())
         ent:Spawn()
         
         local phys = ent:GetPhysicsObject()
         if IsValid(phys)then 
-            local velocity = self.Owner:GetAimVector()
+            local velocity = self:GetOwner():GetAimVector()
             velocity = velocity * ent.Force
             phys:ApplyForceCenter(velocity)
         else
@@ -687,7 +687,7 @@ function SWEP:MM_ShootProjectile(mode)
     end
     
     if !mode.LoopSound then
-        if self.Owner:HasStatusEffect(STATUS_GOREJARED) then
+        if self:GetOwner():HasStatusEffect(STATUS_GOREJARED) then
             self:EmitSound(mode.Sound, 100, 50)
         else
             self:EmitSound(mode.Sound, 100)
@@ -710,20 +710,20 @@ function SWEP:MM_ShootProjectile(mode)
             end
             
         else
-            if self.Owner:HasStatusEffect(STATUS_GOREJARED) then
+            if self:GetOwner():HasStatusEffect(STATUS_GOREJARED) then
                 self.LoopSound:ChangePitch(50, 0)
             else
                 self.LoopSound:ChangePitch(100, 0)
             end
         end
     end
-    self.Owner:ViewPunch(Angle(self:RandomRange(-mode.Recoil/2, mode.Recoil/2) , self:RandomRange(-mode.Recoil/2, mode.Recoil/2), 0)) 
+    self:GetOwner():ViewPunch(Angle(self:RandomRange(-mode.Recoil/2, mode.Recoil/2) , self:RandomRange(-mode.Recoil/2, mode.Recoil/2), 0)) 
     self:TakePrimaryAmmo(mode.TakeAmmo)
 
     self:ShootEffects()
     
-    if (self.Owner:IsPlayer()) then
-        self.Owner:SetLastAttackTime()
+    if (self:GetOwner():IsPlayer()) then
+        self:GetOwner():SetLastAttackTime()
     end
 
     if self.Attack2Anim != nil && mode == self.Secondary then
@@ -737,7 +737,7 @@ function SWEP:MM_ShootProjectile(mode)
     self:SetMMBase_OverChargeAmount(self:GetMMBase_OverChargeAmount() + mode.OverChargeAmount)
     
     if (mode.SpecialCooldown != 0) then
-        self.Owner:SetWeaponCooldown(self, mode.SpecialCooldown)
+        self:GetOwner():SetWeaponCooldown(self, mode.SpecialCooldown)
     end
 end
 
@@ -745,7 +745,7 @@ function SWEP:MM_ShootCustom(mode)
 end
 
 function SWEP:MM_ShootSpiral(mode)
-    if !self.Owner:IsOnGround() then return end
+    if !self:GetOwner():IsOnGround() then return end
     if self:GetMMBase_ReloadTimer() != 0 || self:GetMMBase_ShootTimer() != 0 then return end
     if self:Clip1() == 0 || (mode.TakeAmmoAffectsShootability && self:Clip1()-mode.TakeAmmo < 0) then 
         if (GetConVar("mm_autoreload") != nil && !GetConVar("mm_autoreload"):GetBool()) then
@@ -758,16 +758,16 @@ function SWEP:MM_ShootSpiral(mode)
     for i=1, mode.NumberofShots do
         local bullet = {}
         bullet.Num = 1
-        bullet.Src = self.Owner:GetShootPos() 
-        bullet.Dir = (self.Owner:EyeAngles() + self.Owner:GetViewPunchAngles()):Forward()
+        bullet.Src = self:GetOwner():GetShootPos() 
+        bullet.Dir = (self:GetOwner():EyeAngles() + self:GetOwner():GetViewPunchAngles()):Forward()
         
         // Bullet spread
-        local ang = ((self.Owner:EyeAngles() + self.Owner:GetViewPunchAngles())+Angle(0,0,0))
+        local ang = ((self:GetOwner():EyeAngles() + self:GetOwner():GetViewPunchAngles())+Angle(0,0,0))
         local randang = (i/mode.NumberofShots)
-        ang.p = ang.p + randang*math.sin((i/mode.NumberofShots)*2*math.pi+randang)*mode.Spread*(1+boolToNumber(self.Owner:MissingAnArm())*2)
-        ang.y = ang.y + randang*math.cos((i/mode.NumberofShots)*2*math.pi+randang)*mode.Spread*(1+boolToNumber(self.Owner:MissingAnArm())*2)
-        //ang.p = ang.p*(1+boolToNumber(self.Owner:MissingAnArm())*3)
-        //ang.y = ang.y*(1+boolToNumber(self.Owner:MissingAnArm())*3)
+        ang.p = ang.p + randang*math.sin((i/mode.NumberofShots)*2*math.pi+randang)*mode.Spread*(1+boolToNumber(self:GetOwner():MissingAnArm())*2)
+        ang.y = ang.y + randang*math.cos((i/mode.NumberofShots)*2*math.pi+randang)*mode.Spread*(1+boolToNumber(self:GetOwner():MissingAnArm())*2)
+        //ang.p = ang.p*(1+boolToNumber(self:GetOwner():MissingAnArm())*3)
+        //ang.y = ang.y*(1+boolToNumber(self:GetOwner():MissingAnArm())*3)
         bullet.Spread = Vector(0, 0, 0)
         bullet.Dir = ang:Forward()
         if (self.SlowMoTracer && game.GetTimeScale() < 1) then
@@ -782,12 +782,12 @@ function SWEP:MM_ShootSpiral(mode)
         bullet.Callback = function(attacker, tr, dmginfo)
             self:MM_BulletCallback(attacker, tr, dmginfo, mode)
         end
-        self.Owner:FireBullets(bullet)
+        self:GetOwner():FireBullets(bullet)
     end
      
     self:ShootEffects()
 
-    if self.Owner:HasStatusEffect(STATUS_GOREJARED) then
+    if self:GetOwner():HasStatusEffect(STATUS_GOREJARED) then
         self:EmitSound(mode.Sound, 100, 50)
     else
         self:EmitSound(mode.Sound, 100)
@@ -799,16 +799,16 @@ function SWEP:MM_ShootSpiral(mode)
     
     if self.MakeThumperDust then
         local effectdata = EffectData()
-        effectdata:SetOrigin(self.Owner:GetPos())
+        effectdata:SetOrigin(self:GetOwner():GetPos())
         effectdata:SetScale(128)
         util.Effect("ThumperDust", effectdata)
     end
     
-    if (self.Owner:IsPlayer()) then
-        self.Owner:SetLastAttackTime()
+    if (self:GetOwner():IsPlayer()) then
+        self:GetOwner():SetLastAttackTime()
     end
     
-    self.Owner:ViewPunch(Angle(self:RandomRange(-mode.Recoil/2, mode.Recoil/2) , self:RandomRange(-mode.Recoil/2, mode.Recoil/2), 0)) 
+    self:GetOwner():ViewPunch(Angle(self:RandomRange(-mode.Recoil/2, mode.Recoil/2) , self:RandomRange(-mode.Recoil/2, mode.Recoil/2), 0)) 
     self:SetClip1(math.Clamp(self:Clip1()-mode.TakeAmmo, 0, self:GetMaxClip1()))
     self:DoFireDelay(mode)
 end
@@ -821,11 +821,13 @@ function SWEP:AdjustMouseSensitivity()
         maxrange = 768
     end
     
-    local ent = self.Owner:GetEyeTrace().Entity
-    if ent != nil && ent:IsPlayer() && ent:GetPos():Distance(self.Owner:GetPos()) < maxrange && !ent:HasStatusEffect(STATUS_INVISIBLE) then
-        return 0.375
-    else
-        return 1
+    if IsValid( self:GetOwner() ) then
+        local ent = self:GetOwner():GetEyeTrace().Entity
+        if ent != nil && ent:IsPlayer() && ent:GetPos():Distance(self:GetOwner():GetPos()) < maxrange && !ent:HasStatusEffect(STATUS_INVISIBLE) then
+            return 0.375
+        else
+            return 1
+        end
     end
 end
 
@@ -835,7 +837,7 @@ function SWEP:Think()
     BaseClass.Think(self)
 
     if self.LoopSound != nil then
-        if (self.Secondary.BurstFire && self:GetMMBase_BurstCount() == 0) || self:Clip1() == 0 || !self.Primary.BurstFire && !self.Secondary.BurstFire && !self.Owner:KeyDown(IN_ATTACK) then
+        if (self.Secondary.BurstFire && self:GetMMBase_BurstCount() == 0) || self:Clip1() == 0 || !self.Primary.BurstFire && !self.Secondary.BurstFire && !self:GetOwner():KeyDown(IN_ATTACK) then
             self.LoopSound:Stop()
             self.LoopSound = nil
             if self.Primary.LoopEndSound != nil then
@@ -865,7 +867,7 @@ function SWEP:Think()
     end
     
     if self.UseWindup then
-        if (self.Owner:KeyDown(IN_ATTACK) || self.Owner:KeyDown(IN_ATTACK2)) && self.Owner:IsOnGround() && self:Clip1() != 0 then
+        if (self:GetOwner():KeyDown(IN_ATTACK) || self:GetOwner():KeyDown(IN_ATTACK2)) && self:GetOwner():IsOnGround() && self:Clip1() != 0 then
             if self:GetMMBase_Windup() == 0 && self:GetMMBase_ReloadTimer() == 0 && self:GetMMBase_ShootTimer() == 0 then
                 self:SetMMBase_ShootTimer(CurTime()+1)
                 self:SetMMBase_Windup(CurTime()+1)
@@ -873,7 +875,7 @@ function SWEP:Think()
                 self:SendWeaponAnim(self.ChargeAnim)
             end
             if self:GetMMBase_Windup() != 0 && self:GetMMBase_Windup() < CurTime() then
-                if self.Owner:KeyDown(IN_ATTACK) then
+                if self:GetOwner():KeyDown(IN_ATTACK) then
                     self:PrimaryAttack()
                     self:SetMMBase_Charge(100)
                 elseif self:GetMMBase_Charge() != 0 then
@@ -913,7 +915,7 @@ function SWEP:Think()
         self.originalXHairSizeCharge = self.CrosshairChargeSize
     end
     
-    if (self.Primary.SpecialCooldownGivesAmmo || self.Secondary.SpecialCooldownGivesAmmo) && self.Owner:GetWeaponCooldown(self) == 0 then
+    if (self.Primary.SpecialCooldownGivesAmmo || self.Secondary.SpecialCooldownGivesAmmo) && self:GetOwner():GetWeaponCooldown(self) == 0 then
         if self.ReloadAmount != -1 then
             self:SetClip1(math.min(self:Clip1() + self.ReloadAmount, 6))
         else
@@ -921,9 +923,9 @@ function SWEP:Think()
         end
     end
 
-    if IsValid(self.Owner) then
-        if self:Clip1() != 0 && self.Owner:IsOnGround() && self:GetMMBase_ReloadTimer() == 0 && self:GetMMBase_ShootTimer() == 0 && !self.UseWindup then 
-            if self.Primary.Chargeup && self.Secondary.ChargeCancel && self.Owner:KeyDown(IN_ATTACK2) then
+    if IsValid(self:GetOwner()) then
+        if self:Clip1() != 0 && self:GetOwner():IsOnGround() && self:GetMMBase_ReloadTimer() == 0 && self:GetMMBase_ShootTimer() == 0 && !self.UseWindup then 
+            if self.Primary.Chargeup && self.Secondary.ChargeCancel && self:GetOwner():KeyDown(IN_ATTACK2) then
             
                 if self.Primary.ChargeEmptyShoot then
                     self:SetMMBase_Charge(0)
@@ -932,16 +934,16 @@ function SWEP:Think()
                     self.CrosshairSize = self.originalXHairSize
                 end
                 if (self.Primary.Zoom) then
-                    self.Owner:SetFOV(0, 0)
+                    self:GetOwner():SetFOV(0, 0)
                 end
                 if self.Secondary.ChargeShrinksXHair then
                     self.CrosshairSize = self.originalXHairSize
                 end
                 if (self.Secondary.Zoom) then
-                    self.Owner:SetFOV(0, 0)
+                    self:GetOwner():SetFOV(0, 0)
                 end
                 self:SetMMBase_ShootTimer(CurTime() + 0.5)
-            elseif self.Primary.Chargeup && self.Owner:KeyDown(IN_ATTACK) && self:Clip1() >= self.Primary.TakeAmmo then
+            elseif self.Primary.Chargeup && self:GetOwner():KeyDown(IN_ATTACK) && self:Clip1() >= self.Primary.TakeAmmo then
                 local maxcharge = 100
                 if (self.Primary.ChargeDependsAmmo) then
                     maxcharge = self:Clip1()
@@ -956,7 +958,7 @@ function SWEP:Think()
                         self.DidLoopStart = true
                     end
                     if self.Primary.Zoom then
-                        self.Owner:SetFOV(self.Primary.ZoomMax, 1.5)
+                        self:GetOwner():SetFOV(self.Primary.ZoomMax, 1.5)
                     end
                 end
                 if self:GetMMBase_Charge() < maxcharge then
@@ -979,10 +981,10 @@ function SWEP:Think()
                     self.CrosshairSize = self.originalXHairSize/(1+self:GetMMBase_Charge()/100)
                     self.CrosshairChargeSize = self.originalXHairSizeCharge/(1+self:GetMMBase_Charge()/100)
                 end
-                self.Owner:SetWalkSpeed(self.ChargeSpeed)
-                self.Owner:SetRunSpeed(self.ChargeSpeed)
+                self:GetOwner():SetWalkSpeed(self.ChargeSpeed)
+                self:GetOwner():SetRunSpeed(self.ChargeSpeed)
                 
-            elseif self.Primary.Chargeup && self:GetMMBase_Charge() != 0 && self.Owner:KeyReleased(IN_ATTACK) then
+            elseif self.Primary.Chargeup && self:GetMMBase_Charge() != 0 && self:GetOwner():KeyReleased(IN_ATTACK) then
             
                 self:PrimaryAttack()
                 self:SetMMBase_Charge(0)
@@ -992,27 +994,27 @@ function SWEP:Think()
                     self.CrosshairChargeSizeSize = self.originalXHairSizeCharge
                 end
                 if (self.Primary.Zoom) then
-                    self.Owner:SetFOV(0, 0)
+                    self:GetOwner():SetFOV(0, 0)
                 end
                 
             end
             
-            if self.Secondary.Chargeup && self.Primary.ChargeCancel && self.Owner:KeyDown(IN_ATTACK) then
+            if self.Secondary.Chargeup && self.Primary.ChargeCancel && self:GetOwner():KeyDown(IN_ATTACK) then
                 self:SetMMBase_Charge(0)
                 if self.Primary.ChargeShrinksXHair then
                     self.CrosshairSize = self.originalXHairSize
                 end
                 if (self.Primary.Zoom) then
-                    self.Owner:SetFOV(0, 0)
+                    self:GetOwner():SetFOV(0, 0)
                 end
                 if self.Secondary.ChargeShrinksXHair then
                     self.CrosshairSize = self.originalXHairSize
                 end
                 if (self.Secondary.Zoom) then
-                    self.Owner:SetFOV(0, 0)
+                    self:GetOwner():SetFOV(0, 0)
                 end
                 self:SetMMBase_ShootTimer(CurTime() + 0.5)
-            elseif self.Secondary.Chargeup && self.Owner:KeyDown(IN_ATTACK2) && self:Clip1() >= self.Secondary.TakeAmmo then
+            elseif self.Secondary.Chargeup && self:GetOwner():KeyDown(IN_ATTACK2) && self:Clip1() >= self.Secondary.TakeAmmo then
                 local maxcharge = 100
                 if (self.Secondary.ChargeDependsAmmo) then
                     maxcharge = self:Clip1()
@@ -1027,7 +1029,7 @@ function SWEP:Think()
                         self.DidLoopStart = true
                     end
                     if self.Secondary.Zoom then
-                        self.Owner:SetFOV(self.Secondary.ZoomMax, 1.5)
+                        self:GetOwner():SetFOV(self.Secondary.ZoomMax, 1.5)
                     end
                 end
                 if self:GetMMBase_Charge() < maxcharge then
@@ -1050,11 +1052,11 @@ function SWEP:Think()
                     self.CrosshairSize = self.originalXHairSize/(1+self:GetMMBase_Charge()/100)
                     self.CrosshairChargeSize = self.originalXHairSizeCharge/(1+self:GetMMBase_Charge()/100)
                 end
-                if IsValid(self.Owner) then
-                    self.Owner:SetWalkSpeed(self.ChargeSpeed)
-                    self.Owner:SetRunSpeed(self.ChargeSpeed)
+                if IsValid(self:GetOwner()) then
+                    self:GetOwner():SetWalkSpeed(self.ChargeSpeed)
+                    self:GetOwner():SetRunSpeed(self.ChargeSpeed)
                 end
-            elseif self.Secondary.Chargeup && self:GetMMBase_Charge() != 0 && self.Owner:KeyReleased(IN_ATTACK2) then
+            elseif self.Secondary.Chargeup && self:GetMMBase_Charge() != 0 && self:GetOwner():KeyReleased(IN_ATTACK2) then
                 self:SecondaryAttack()
                 self:SetMMBase_Charge(0)
                 self.DidLoopStart = false
@@ -1063,25 +1065,25 @@ function SWEP:Think()
                     self.CrosshairChargeSizeSize = self.originalXHairSizeCharge
                 end
                 if (self.Secondary.Zoom) then
-                    self.Owner:SetFOV(0, 0)
+                    self:GetOwner():SetFOV(0, 0)
                 end
             end
             
         else
-            if (!self.Owner:KeyDown(IN_ATTACK) || self.Primary.ChargeEmptyShoot) && !self.UseWindup then
+            if (!self:GetOwner():KeyDown(IN_ATTACK) || self.Primary.ChargeEmptyShoot) && !self.UseWindup then
                 self:SetMMBase_Charge(0)
             end
             if self.Primary.ChargeShrinksXHair then
                 self.CrosshairSize = self.originalXHairSize
             end
             if (self.Primary.Zoom) then
-                self.Owner:SetFOV(0, 0)
+                self:GetOwner():SetFOV(0, 0)
             end
             if self.Secondary.ChargeShrinksXHair then
                 self.CrosshairSize = self.originalXHairSize
             end
             if (self.Secondary.Zoom) then
-                self.Owner:SetFOV(0, 0)
+                self:GetOwner():SetFOV(0, 0)
             end
         end
     end
@@ -1093,27 +1095,27 @@ function SWEP:Reload()
     if self:Clip1() >= self:GetMaxClip1() then return end
 
     if self.ShotgunReload then
-        self.Owner:SetAnimation(PLAYER_RELOAD)
+        self:GetOwner():SetAnimation(PLAYER_RELOAD)
         self:SendWeaponAnim(self.ShotgunReloadAnimIn)
         
-        if self.Owner:MissingAnArm() && self.ReloadSlowedByArm then
-            self.Owner:GetViewModel():SetPlaybackRate(0.5)
+        if self:GetOwner():MissingAnArm() && self.ReloadSlowedByArm then
+            self:GetOwner():GetViewModel():SetPlaybackRate(0.5)
         end
         
-        local time = self.Owner:GetViewModel():SequenceDuration()/self.Owner:GetViewModel():GetPlaybackRate()
+        local time = self:GetOwner():GetViewModel():SequenceDuration()/self:GetOwner():GetViewModel():GetPlaybackRate()
         self:SetMMBase_ReloadTimer(CurTime() + time*10)
         self:SetMMBase_ReloadShotgunTimer(CurTime() + time)
         self:SetMMBase_ReloadShotgunState(1)
     else
-        self.Owner:SetAnimation(PLAYER_RELOAD)
+        self:GetOwner():SetAnimation(PLAYER_RELOAD)
         self:SendWeaponAnim(self.ReloadAnim)
         
-        if self.Owner:MissingAnArm() && self.ReloadSlowedByArm then
-            self.Owner:GetViewModel():SetPlaybackRate(0.5)
+        if self:GetOwner():MissingAnArm() && self.ReloadSlowedByArm then
+            self:GetOwner():GetViewModel():SetPlaybackRate(0.5)
         end
 
-        local time = self.Owner:GetViewModel():GetPlaybackRate()
-        self:SetMMBase_ReloadTimer(CurTime() + self.Owner:GetViewModel():SequenceDuration()/time)
+        local time = self:GetOwner():GetViewModel():GetPlaybackRate()
+        self:SetMMBase_ReloadTimer(CurTime() + self:GetOwner():GetViewModel():SequenceDuration()/time)
         
         if (self:Clip1() == 0) then
             self:SetMMBase_ReloadTimerAmmo(CurTime() + self.ReloadOutTime/time + self.ReloadInTime/time)
@@ -1125,7 +1127,7 @@ end
 
 function SWEP:LookingAtShootable()
     local tr = LocalPlayer():GetEyeTrace()
-    if (tr.Entity:IsPlayer() && !tr.Entity:HasStatusEffect(STATUS_INVISIBLE) && ((self.Owner:Team() == TEAM_COOPMONST && tr.Entity:Team() != self.Owner:Team()) || (self.Owner:Team() == TEAM_COOPOTHER && tr.Entity:Team() != self.Owner:Team()) || (tr.Entity:Team() == TEAM_MONST))) then
+    if (tr.Entity:IsPlayer() && !tr.Entity:HasStatusEffect(STATUS_INVISIBLE) && ((self:GetOwner():Team() == TEAM_COOPMONST && tr.Entity:Team() != self:GetOwner():Team()) || (self:GetOwner():Team() == TEAM_COOPOTHER && tr.Entity:Team() != self:GetOwner():Team()) || (tr.Entity:Team() == TEAM_MONST))) then
         if self.Primary.UseRange then
             return tr.HitPos:Distance(tr.StartPos) < self.Primary.Range
         elseif self.Secondary.UseRange then
@@ -1237,10 +1239,10 @@ function SWEP:FireAnimationEvent(pos, ang, event, options)
 	if (event == 5001) then 
         if self.MuzzleEffect != "" then
             local fx = EffectData();
-            fx:SetOrigin(self.Owner:GetShootPos());
+            fx:SetOrigin(self:GetOwner():GetShootPos());
             fx:SetEntity(self);
-            fx:SetStart(self.Owner:GetShootPos());
-            fx:SetNormal(self.Owner:GetAimVector());
+            fx:SetStart(self:GetOwner():GetShootPos());
+            fx:SetNormal(self:GetOwner():GetAimVector());
             fx:SetAttachment(1);
             util.Effect(self.MuzzleEffect, fx);
         end
